@@ -1,0 +1,41 @@
+.env.example
+  s_78a89d78c5bdd7::t_014beace65cdad 1-2
+.gitignore
+  s_78a89d78c5bdd7::t_b2fa54b1d1e638 1-3
+docker-compose.yml
+  s_78a89d78c5bdd7::t_c4c4362df05a14 1-19
+src/main.ts
+  s_aa9feb18eaf7eb::t_e0e20ee325b948 1-19
+src/module/cadastre/cadastre.http.live.ts
+  s_aa9feb18eaf7eb::t_656042843bbdb3 1-25
+src/platform/http/api.define.ts
+  s_aa9feb18eaf7eb::t_f7676914532315 1-16
+src/platform/http/api.live.ts
+  s_aa9feb18eaf7eb::t_da2746c5fe1753 1-18
+tsconfig.json
+  s_78a89d78c5bdd7::t_104e6df0bede0f 1-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "36490f8fd67c29f6817ecfa3896d0f63a3340a20",
+  "prompts": {},
+  "sessions": {
+    "s_78a89d78c5bdd7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3f45a394-b4c9-4a3d-bfbe-15721d2fed9a",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_aa9feb18eaf7eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89cc9306-8d65-4e2d-89ad-d642ce6dbbd9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
