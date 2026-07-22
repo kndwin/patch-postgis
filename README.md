@@ -1,6 +1,6 @@
 # Patch PostGIS
 
-Checkpoint 2 is a small Bun + TypeScript service using Effect v4's unstable
+Checkpoint 3 is a small Bun + TypeScript service using Effect v4's unstable
 `HttpApi`, with a real Drizzle PostgreSQL configuration and a PostGIS development
 database. The v4 beta packages are pinned together because the HTTP APIs remain
 unstable.
@@ -26,6 +26,31 @@ Expected health response: `{"status":"ok"}`. The generated OpenAPI document and
 Scalar documentation UI are available at the other two URLs. `DATABASE_URL`
 configures both `src/platform/db/client.ts` and Drizzle Kit; the service deliberately does
 not query the database from `/health`.
+
+## Real NSW parcel import
+
+`bun run import` performs one bounded import and exits. It queries the official
+NSW Spatial Services ArcGIS REST **Lot (layer 8)** service from the official
+[NSW Land Parcel and Property Theme multiCRS](https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Land_Parcel_Property_Theme_multiCRS/FeatureServer/8).
+The hardcoded WGS84 envelope is `151.205,-33.889,151.214,-33.883` (Surry
+Hills, NSW). Source `cadid` is stored as the lot `id`. The display
+`lot_number` uses `lotidstring`, falling back to `lotnumber`; features with
+neither are skipped and reported (no synthetic `UNNUMBERED` value is created).
+Geometry is requested in EPSG:4326 and ingested as `MultiPolygon(4326)`. To
+avoid unstable offsets, the importer first requests all IDs for the bbox, then
+fetches those IDs in chunks of 100. `fetched` counts returned features,
+`upserted` counts rows with a usable lot number, and `skipped` counts missing-number
+features.
+
+```sh
+docker compose up -d postgres
+bunx drizzle-kit migrate
+bun run import
+docker compose exec -T postgres psql -U postgres -d patch_postgis -c 'select count(*) from cadastre_lots;'
+```
+
+This is intentionally not a synchronizer: it imports only this documented box
+and has no authentication, workflow, reconciliation, or generic ArcGIS layer.
 
 ## Fake lot retrieval
 
@@ -78,11 +103,10 @@ the `app` service and a PostGIS service running `postgis/postgis:16-3.4`.
 Before planning or applying, create the **shared** environment variable
 `POSTGRES_PASSWORD` in Railway. The IaC file references that existing shared
 variable; it does not contain, generate, or manage a password. The app receives a
-`DATABASE_URL` reference from the PostGIS service. Ensure the target app service's
-source is connected to this repository in Railway (the repository is intentionally
-not guessed in source code, since this checkout has no Git remote). If creating a
-new app service rather than managing an existing connected one, connect its GitHub
-repository in Railway first.
+`DATABASE_URL` reference from the PostGIS service, and its IaC source explicitly
+targets the GitHub repository `kndwin/patch-postgis`. If creating a new app service
+rather than managing the existing one, ensure that repository is available to the
+linked Railway GitHub integration.
 
 The supplied target is project `8eadb4cb-3312-440e-93ea-01dcc53860ad` and
 environment `db955324-45af-4615-b1f0-02b5c1eb482c`. Link locally with the Railway
@@ -109,12 +133,16 @@ step, before the new app deployment is activated. The migration command uses the
 app's `DATABASE_URL`, and migrations are already committed under `drizzle/`.
 The PostGIS service has a native Railway `postgis-data` volume, explicitly sized
 at 4,096 MB and mounted at `/var/lib/postgresql/data`; `PGDATA` points to the
-image's `/var/lib/postgresql/data/pgdata` subdirectory. The service and volume
-are both pinned to `us-west2`, since Railway volumes are regional and must be
+image's `/var/lib/postgresql/data/pgdata` subdirectory. Both the PostGIS service
+and volume, as well as the app service, default to Singapore's current Railway
+region ID `asia-southeast1-eqsg3a`. Railway volumes are regional and must be
 co-located with their service.
 
-Review the plan before applying: decreasing the volume size, deleting or
-detaching the volume, or changing its region can be destructive to persisted
-PostgreSQL data. Keep backups and treat those changes as a data-migration
-operation. The PostGIS image is suitable for this development checkpoint, not a
-substitute for managed database backups, upgrades, and durability planning.
+> **IMPORTANT: review before applying.** This change moves the existing `postgis-data`
+> volume from `us-west2` to Singapore (`asia-southeast1-eqsg3a`). Expect downtime,
+> and treat the move as a potentially destructive data migration: take and verify
+> a backup first, review the complete plan, and confirm the recovery procedure.
+> Do **not** apply blindly. Decreasing the volume size, deleting or detaching the
+> volume, or changing its region can destroy persisted PostgreSQL data. The PostGIS
+> image is suitable for this development checkpoint, not a substitute for managed
+> database backups, upgrades, and durability planning.

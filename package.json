@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun --watch src/main.ts",
     "start": "bun src/main.ts",
+    "import": "bun src/entrypoint/import.ts",
     "lint": "oxlint --type-aware src",
     "check": "bun run lint && bun run typecheck && prettier --check .",
     "typecheck": "tsc --noEmit",

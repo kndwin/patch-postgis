@@ -1,17 +1,26 @@
-import { defineRailway, image, project, service, volume } from "railway/iac";
+import {
+  defineRailway,
+  github,
+  image,
+  project,
+  service,
+  volume,
+} from "railway/iac";
 
 export default defineRailway((ctx) => {
+  const singaporeRegion = "asia-southeast1-eqsg3a";
+
   // This is deliberately an image-backed service rather than Railway's managed
   // postgres helper: the application needs the PostGIS extension from this image.
   const postgisData = volume("postgis-data", {
     // Volumes are regional. Keep the database service in the same Railway region.
-    region: "us-west2",
+    region: singaporeRegion,
     sizeMB: 4096,
   });
 
   const postgis = service("postgis", {
     source: image("postgis/postgis:16-3.4"),
-    regions: { "us-west2": 1 },
+    replicas: { [singaporeRegion]: 1 },
     volumeMounts: {
       "/var/lib/postgresql/data": postgisData,
     },
@@ -26,9 +35,8 @@ export default defineRailway((ctx) => {
   });
 
   const app = service("app", {
-    // The repository is intentionally not declared here. The target app service
-    // is connected to the repository in Railway; omitting source lets IaC own
-    // deployment settings without replacing that connection with a guessed repo.
+    source: github("kndwin/patch-postgis"),
+    replicas: { [singaporeRegion]: 1 },
     build: {
       builder: "DOCKERFILE",
       dockerfilePath: "Dockerfile",
