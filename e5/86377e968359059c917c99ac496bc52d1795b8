@@ -1,0 +1,31 @@
+.railway/railway.ts
+  s_aa9feb18eaf7eb::t_969847cb0500fb 1-8,11-12,17,23,38-39
+README.md
+  s_aa9feb18eaf7eb::t_0d8714ca128697 3,30-54,106-109,136-138,141-148
+package.json
+  s_aa9feb18eaf7eb::t_ebe5c776fcd3da 8
+src/entrypoint/import.ts
+  s_aa9feb18eaf7eb::t_4202439ea5e3ea 1-20
+src/module/cadastre/cadastre.geometry.test.ts
+  s_aa9feb18eaf7eb::t_9241f34b4ac4a3 1-61
+src/module/cadastre/cadastre.geometry.ts
+  s_aa9feb18eaf7eb::t_a11efc208901f1 1-51
+src/module/cadastre/cadastre.schema.ts
+  s_aa9feb18eaf7eb::t_b73516617ba58d 6-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "e586377e968359059c917c99ac496bc52d1795b8",
+  "prompts": {},
+  "sessions": {
+    "s_aa9feb18eaf7eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89cc9306-8d65-4e2d-89ad-d642ce6dbbd9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
