@@ -52,6 +52,21 @@ docker compose exec -T postgres psql -U postgres -d patch_postgis -c 'select cou
 This is intentionally not a synchronizer: it imports only this documented box
 and has no authentication, workflow, reconciliation, or generic ArcGIS layer.
 
+## Vector tiles
+
+Cadastre parcels are served as Mapbox Vector Tiles:
+
+```sh
+curl -sS -D /tmp/tile.headers \
+  http://localhost:3000/tiles/13/7536/4916.mvt \
+  -o /tmp/surry-hills.mvt
+```
+
+The response content type is `application/vnd.mapbox-vector-tile`. The tile
+contains a `lots` layer with `id` and `lot_number` properties. Zoom must be from
+0 through 22, and x/y must be valid XYZ coordinates for that zoom. Valid tiles
+without parcels return `200` with an empty MVT body.
+
 ## Fake lot retrieval
 
 Start PostGIS, apply the migration, then insert a fake lot for manual verification:

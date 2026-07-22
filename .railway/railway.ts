@@ -46,6 +46,8 @@ export default defineRailway((ctx) => {
     healthcheck: "/health",
     env: {
       DATABASE_URL: postgis.env.DATABASE_URL,
+      // Keep the app listener aligned with the Railway domain target port.
+      PORT: "3000",
     },
   });
 

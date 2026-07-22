@@ -107,6 +107,11 @@ interface CadastreServiceContract {
   readonly getLot: (params: {
     readonly id: string;
   }) => Effect.Effect<LotResponse, LotNotFoundError | EffectDrizzleQueryError>;
+  readonly getTile: (params: {
+    readonly z: number;
+    readonly x: number;
+    readonly y: number;
+  }) => Effect.Effect<Uint8Array, EffectDrizzleQueryError>;
   readonly importSurryHills: () => Effect.Effect<
     {
       readonly fetched: number;
@@ -171,6 +176,35 @@ export class CadastreService extends Context.Service<
             message: `Lot ${id} was not found`,
           });
         return lot;
+      }),
+      getTile: Effect.fn("CadastreService.getTile")(function* ({ z, x, y }) {
+        const result = yield* db.execute<{ tile: Uint8Array }>(sql`
+          WITH bounds AS (
+            SELECT ST_TileEnvelope(
+              ${z},
+              ${x},
+              ${y}
+            ) AS geom
+          ),
+          mvtgeom AS (
+            SELECT l.id, l.lot_number,
+              ST_AsMVTGeom(ST_Transform(l.geometry, 3857), bounds.geom, 4096, 64, true) AS geometry
+            FROM cadastre_lots AS l CROSS JOIN bounds
+            WHERE l.geometry IS NOT NULL
+              AND l.geometry && ST_Transform(bounds.geom, 4326)
+          )
+          SELECT COALESCE(ST_AsMVT(mvtgeom, 'lots', 4096, 'geometry'), ''::bytea) AS tile
+          FROM mvtgeom
+          WHERE geometry IS NOT NULL
+        `);
+        // effect-postgres executes raw SQL through node-postgres and returns its
+        // Result object at runtime, despite db.execute's array-shaped type.
+        const tile = (
+          result as unknown as {
+            readonly rows: readonly { readonly tile: Uint8Array }[];
+          }
+        ).rows[0]?.tile;
+        return tile instanceof Uint8Array ? tile : new Uint8Array();
       }),
       importSurryHills: Effect.fn("CadastreService.importSurryHills")(
         function* () {
