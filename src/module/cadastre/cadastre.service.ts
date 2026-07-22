@@ -2,20 +2,34 @@ import { eq, sql } from "drizzle-orm";
 import { EffectDrizzleQueryError } from "drizzle-orm/effect-core";
 import { Context, Effect, Schema } from "effect";
 import { Db } from "../../platform/db/client";
-import { cadastreLots } from "./cadastre.model";
+import { cadastreImportCheckpoints, cadastreLots } from "./cadastre.model";
 import type { CadastreLotRow } from "./cadastre.model";
 import { CadastreImportError, LotNotFoundError } from "./cadastre.schema";
 import { ringsToMultiPolygonCoordinates } from "./cadastre.geometry";
 
 type LotResponse = Pick<CadastreLotRow, "id" | "lotNumber">;
-export const NSW_LOT_QUERY =
+export const SYDNEY_LOT_QUERY =
   "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Land_Parcel_Property_Theme_multiCRS/FeatureServer/8/query";
-// Exactly one deliberate import area: Surry Hills, NSW, in WGS84.
+// Exactly one deliberate initial-import area, in WGS84: metropolitan Sydney
+// and Western Sydney, not statewide NSW.
+// Padded rectangular extent of the official Greater Sydney Region planning
+// districts, including the Western City District.
+export const GREATER_SYDNEY_REGION_BBOX = "150.00,-34.35,151.35,-32.95";
 const SURRY_HILLS_BBOX = "151.205,-33.889,151.214,-33.883";
-const ID_CHUNK_SIZE = 100;
+export const SYDNEY_ID_BATCH_SIZE = 100;
+export const SYDNEY_IMPORT_CONCURRENCY = 4;
+export const SYDNEY_CHECKPOINT_SOURCE =
+  "greater-sydney-region-initial-cadastre-v1";
+
+export const sortSydneyObjectIds = (ids: readonly number[]): number[] =>
+  [...ids].sort((left, right) => left - right);
+
+export const nextSydneyObjectIdIndex = (index: number, batchSize: number) =>
+  index + batchSize;
 
 const ArcGisFeature = Schema.Struct({
   attributes: Schema.Struct({
+    OBJECTID: Schema.Union([Schema.Number, Schema.String]),
     cadid: Schema.Union([Schema.Number, Schema.String]),
     lotidstring: Schema.NullOr(Schema.String),
     lotnumber: Schema.NullOr(Schema.String),
@@ -40,24 +54,39 @@ const featureGeoJson = (feature: ArcGisFeature) =>
 const fetchJson = Effect.fn("CadastreService.fetchJson")(function* (
   params: URLSearchParams,
 ) {
-  const url = new URL(NSW_LOT_QUERY);
-  url.search = params.toString();
-  const response = yield* Effect.tryPromise({
-    try: () => fetch(url),
-    catch: (cause) =>
-      new CadastreImportError({
-        message: `NSW ArcGIS request failed: ${String(cause)}`,
-      }),
-  });
-  if (!response.ok)
-    return yield* new CadastreImportError({
-      message: `NSW ArcGIS returned HTTP ${response.status}`,
-    });
+  const url = new URL(SYDNEY_LOT_QUERY);
   const body = yield* Effect.tryPromise({
-    try: () => response.json(),
+    try: async () => {
+      // ArcGIS occasionally returns 429/5xx during a large export. Retry only
+      // those failures; the cap keeps a bad endpoint from hanging a Railway run.
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        let response: Response;
+        try {
+          response = await fetch(url, {
+            method: "POST",
+            headers: { "content-type": "application/x-www-form-urlencoded" },
+            body: params,
+          });
+        } catch (cause) {
+          if (attempt === 3) throw cause;
+          await new Promise((resolve) =>
+            setTimeout(resolve, 200 * 2 ** attempt),
+          );
+          continue;
+        }
+        if (response.ok) return await response.json();
+        const transient = [408, 429, 500, 502, 503, 504].includes(
+          response.status,
+        );
+        if (!transient || attempt === 3)
+          throw new Error(`HTTP ${response.status}`);
+        await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
+      }
+      throw new Error("retry limit reached");
+    },
     catch: (cause) =>
       new CadastreImportError({
-        message: `NSW ArcGIS response was not JSON: ${String(cause)}`,
+        message: `Sydney cadastre ArcGIS request failed: ${String(cause)}`,
       }),
   });
   return body;
@@ -79,7 +108,7 @@ const fetchIds = () =>
     Effect.mapError(
       (cause) =>
         new CadastreImportError({
-          message: `NSW ArcGIS ID response shape was invalid: ${String(cause)}`,
+          message: `Sydney cadastre ArcGIS ID response shape was invalid: ${String(cause)}`,
         }),
     ),
   );
@@ -88,7 +117,7 @@ const fetchFeatures = (objectIds: readonly number[]) =>
   fetchJson(
     new URLSearchParams({
       objectIds: objectIds.join(","),
-      outFields: "cadid,lotnumber,lotidstring",
+      outFields: "OBJECTID,cadid,lotnumber,lotidstring",
       returnGeometry: "true",
       outSR: "4326",
       f: "json",
@@ -98,9 +127,32 @@ const fetchFeatures = (objectIds: readonly number[]) =>
     Effect.mapError(
       (cause) =>
         new CadastreImportError({
-          message: `NSW ArcGIS feature response shape was invalid: ${String(cause)}`,
+          message: `Sydney cadastre ArcGIS feature response shape was invalid: ${String(cause)}`,
         }),
     ),
+  );
+
+const fetchSydneyBatch = (objectIds: readonly number[]) =>
+  fetchFeatures(objectIds).pipe(
+    Effect.flatMap((page) => {
+      if (page.exceededTransferLimit === true)
+        return Effect.fail(
+          new CadastreImportError({
+            message: "Sydney cadastre ArcGIS batch exceeded transfer limit",
+          }),
+        );
+      const returned = new Set(
+        page.features.map((feature) => Number(feature.attributes.OBJECTID)),
+      );
+      const missing = objectIds.filter((id) => !returned.has(id));
+      if (missing.length > 0)
+        return Effect.fail(
+          new CadastreImportError({
+            message: `Sydney cadastre ArcGIS batch omitted OBJECTIDs: ${missing.join(",")}`,
+          }),
+        );
+      return Effect.succeed(page);
+    }),
   );
 
 interface CadastreServiceContract {
@@ -117,6 +169,15 @@ interface CadastreServiceContract {
       readonly fetched: number;
       readonly upserted: number;
       readonly skipped: number;
+    },
+    CadastreImportError | EffectDrizzleQueryError
+  >;
+  readonly importSydneyInitial: () => Effect.Effect<
+    {
+      readonly fetched: number;
+      readonly upserted: number;
+      readonly skipped: number;
+      readonly resumedFrom: number;
     },
     CadastreImportError | EffectDrizzleQueryError
   >;
@@ -215,10 +276,10 @@ export class CadastreService extends Context.Service<
           for (
             let start = 0;
             start < ids.objectIds.length;
-            start += ID_CHUNK_SIZE
+            start += SYDNEY_ID_BATCH_SIZE
           ) {
-            const page = yield* fetchFeatures(
-              ids.objectIds.slice(start, start + ID_CHUNK_SIZE),
+            const page = yield* fetchSydneyBatch(
+              ids.objectIds.slice(start, start + SYDNEY_ID_BATCH_SIZE),
             );
             fetched += page.features.length;
             if (page.features.length > 0) {
@@ -235,6 +296,145 @@ export class CadastreService extends Context.Service<
             }
           }
           return { fetched, upserted, skipped };
+        },
+      ),
+      importSydneyInitial: Effect.fn("CadastreService.importSydneyInitial")(
+        function* () {
+          const checkpoint = yield* db
+            .select()
+            .from(cadastreImportCheckpoints)
+            .where(
+              eq(cadastreImportCheckpoints.source, SYDNEY_CHECKPOINT_SOURCE),
+            )
+            .limit(1)
+            .pipe(Effect.map((rows) => rows[0]));
+          let objectIds = checkpoint?.objectIds;
+          if (objectIds === undefined) {
+            const ids = yield* fetchJson(
+              new URLSearchParams({
+                where: "1=1",
+                geometry: GREATER_SYDNEY_REGION_BBOX,
+                geometryType: "esriGeometryEnvelope",
+                inSR: "4326",
+                spatialRel: "esriSpatialRelIntersects",
+                returnIdsOnly: "true",
+                f: "json",
+              }),
+            ).pipe(
+              Effect.flatMap((body) =>
+                Schema.decodeUnknownEffect(ArcGisIds)(body),
+              ),
+              Effect.mapError(
+                (cause) =>
+                  new CadastreImportError({
+                    message: `Sydney cadastre ArcGIS ID response shape was invalid: ${String(cause)}`,
+                  }),
+              ),
+            );
+            objectIds = sortSydneyObjectIds(ids.objectIds);
+            // The snapshot is durable before any feature request. A resume uses
+            // this exact set and never performs a second ID discovery.
+            yield* db.insert(cadastreImportCheckpoints).values({
+              source: SYDNEY_CHECKPOINT_SOURCE,
+              objectIds,
+              completed: objectIds.length === 0,
+            });
+          }
+          let nextIndex = checkpoint?.nextObjectIdIndex ?? 0;
+          let fetched = checkpoint?.fetched ?? 0;
+          let upserted = checkpoint?.upserted ?? 0;
+          let skipped = checkpoint?.skipped ?? 0;
+          const resumedFrom = nextIndex;
+          if (checkpoint?.completed)
+            return { fetched, upserted, skipped, resumedFrom };
+          yield* Effect.log(
+            `Sydney + Western Sydney cadastre import starting at OBJECTID index ${nextIndex}`,
+          );
+          while (nextIndex < objectIds.length) {
+            const starts = Array.from(
+              {
+                length: Math.min(
+                  SYDNEY_IMPORT_CONCURRENCY,
+                  Math.ceil(
+                    (objectIds.length - nextIndex) / SYDNEY_ID_BATCH_SIZE,
+                  ),
+                ),
+              },
+              (_, waveIndex) => nextIndex + waveIndex * SYDNEY_ID_BATCH_SIZE,
+            );
+            const pages = yield* Effect.all(
+              starts.map((start) =>
+                fetchSydneyBatch(
+                  objectIds.slice(start, start + SYDNEY_ID_BATCH_SIZE),
+                ),
+              ),
+              { concurrency: SYDNEY_IMPORT_CONCURRENCY },
+            );
+            const pageFetched = pages.reduce(
+              (sum, page) => sum + page.features.length,
+              0,
+            );
+            const pageSkipped = pages.reduce(
+              (sum, page) =>
+                sum +
+                page.features.filter(
+                  ({ attributes }) =>
+                    !(
+                      attributes.lotidstring?.trim() ||
+                      attributes.lotnumber?.trim()
+                    ),
+                ).length,
+              0,
+            );
+            const nextIndexAfterWave = Math.min(
+              nextIndex + pages.length * SYDNEY_ID_BATCH_SIZE,
+              objectIds.length,
+            );
+            const wave = yield* db
+              .transaction((tx) =>
+                Effect.gen(function* () {
+                  const pageUpserted = yield* upsertBatch(
+                    tx as unknown as typeof db,
+                    pages.flatMap((page) => page.features),
+                  );
+                  const nextFetched = fetched + pageFetched;
+                  const nextUpserted = upserted + pageUpserted;
+                  const nextSkipped = skipped + pageSkipped;
+                  yield* tx
+                    .update(cadastreImportCheckpoints)
+                    .set({
+                      nextObjectIdIndex: nextIndexAfterWave,
+                      fetched: nextFetched,
+                      upserted: nextUpserted,
+                      skipped: nextSkipped,
+                      completed: nextIndexAfterWave >= objectIds.length,
+                    })
+                    .where(
+                      eq(
+                        cadastreImportCheckpoints.source,
+                        SYDNEY_CHECKPOINT_SOURCE,
+                      ),
+                    );
+                  return { nextFetched, nextUpserted, nextSkipped };
+                }),
+              )
+              .pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new CadastreImportError({
+                      message: `Sydney cadastre transaction failed: ${String(cause)}`,
+                    }),
+                ),
+              );
+            fetched = wave.nextFetched;
+            upserted = wave.nextUpserted;
+            skipped = wave.nextSkipped;
+            nextIndex = nextIndexAfterWave;
+            yield* Effect.log(
+              `Sydney + Western Sydney cadastre progress: fetched=${fetched} upserted=${upserted} skipped=${skipped} nextObjectIdIndex=${nextIndex}`,
+            );
+          }
+          return { fetched, upserted, skipped, resumedFrom };
         },
       ),
     };

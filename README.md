@@ -27,7 +27,7 @@ Scalar documentation UI are available at the other two URLs. `DATABASE_URL`
 configures both `src/platform/db/client.ts` and Drizzle Kit; the service deliberately does
 not query the database from `/health`.
 
-## Real NSW parcel import
+## Real Sydney parcel import
 
 `bun run import` performs one bounded import and exits. It queries the official
 NSW Spatial Services ArcGIS REST **Lot (layer 8)** service from the official
@@ -51,6 +51,52 @@ docker compose exec -T postgres psql -U postgres -d patch_postgis -c 'select cou
 
 This is intentionally not a synchronizer: it imports only this documented box
 and has no authentication, workflow, reconciliation, or generic ArcGIS layer.
+
+### Sydney + Western Sydney initial import
+
+`bun run import:sydney` imports the official layer 8 (`_multiCRS`) features that
+intersect this fixed WGS84 envelope: **`150.00,-34.35,151.35,-32.95`**
+(`xmin,ymin,xmax,ymax`). This padded rectangular extent covers the official
+Greater Sydney Region planning districts, including the Western City District;
+it is not a statewide import. A live source count on 23 July 2026 returned about
+1.43 million lots. The importer sends the envelope as ArcGIS
+`geometry` with `geometryType=esriGeometryEnvelope`, `inSR=4326`, and
+`spatialRel=esriSpatialRelIntersects`. It first takes exactly one
+`returnIdsOnly=true` snapshot, sorts OBJECTIDs numerically, and durably stores
+that snapshot in `cadastre_import_checkpoints`. Feature requests are POSTs of
+100 IDs, in waves of four; each response must return every requested OBJECTID
+and must not set `exceededTransferLimit`. A wave's upserts and checkpoint
+advancement are one transaction. Only the ID snapshot plus one four-batch wave
+is retained in memory. If Railway stops, rerun the same command: it resumes from
+the durable ID index and never discovers a new snapshot.
+Transient ArcGIS 408/429/5xx responses are retried with a bounded backoff; other
+failures terminate with a nonzero exit. The checkpoint is specific to this initial
+snapshot, so it is not a reconciliation or synchronization mechanism.
+
+On Railway, first deploy/apply the migration, then run this as a one-off job in the
+app service (with the app's `DATABASE_URL`):
+
+```sh
+railway ssh --service app --environment production -- \
+  "sh -lc 'cd /app && bunx drizzle-kit migrate'"
+railway ssh --service app --environment production -- \
+  "sh -lc 'cd /app && bun run import:sydney'"
+```
+
+Run it from a reviewed Railway environment, keep the process logs, and do not run
+multiple imports concurrently. `fetched`, `upserted`, and `skipped` are cumulative
+checkpoint counters; source count is measured by the importer logs, not guessed.
+Useful verification queries are:
+
+```sql
+SELECT source, next_object_id_index, cardinality(object_ids) AS snapshot_ids,
+       fetched, upserted, skipped, completed
+FROM cadastre_import_checkpoints
+WHERE source = 'greater-sydney-region-initial-cadastre-v1';
+SELECT count(*) AS lots, count(geometry) AS geometries FROM cadastre_lots;
+SELECT ST_SRID(geometry), count(*) FROM cadastre_lots GROUP BY 1;
+SELECT count(*) FROM cadastre_lots WHERE geometry IS NULL;
+```
 
 ## Vector tiles
 
