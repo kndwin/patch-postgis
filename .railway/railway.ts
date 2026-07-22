@@ -34,7 +34,7 @@ export default defineRailway((ctx) => {
       dockerfilePath: "Dockerfile",
     },
     start: "bun src/main.ts",
-    preDeploy: "bunx drizzle-kit migrate",
+    preDeploy: "bunx --no-install drizzle-kit migrate",
     healthcheck: "/health",
     env: {
       DATABASE_URL: postgis.env.DATABASE_URL,
