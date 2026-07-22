@@ -1,0 +1,30 @@
+{
+  "name": "patch-postgis",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "lint": "oxlint --type-aware src",
+    "check": "bun run lint && bun run typecheck && prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-beta.100",
+    "@effect/sql-pg": "4.0.0-beta.100",
+    "drizzle-orm": "1.0.0-rc.4",
+    "effect": "4.0.0-beta.100"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "drizzle-kit": "1.0.0-rc.4",
+    "effect-oxlint": "^0.2.0",
+    "oxlint-tsgolint": "^0.21.0",
+    "oxlint": "^1.60.0",
+    "prettier": "latest",
+    "railway": "^3.5.10",
+    "typescript": "latest"
+  }
+}
