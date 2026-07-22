@@ -1,0 +1,21 @@
+src/module/cadastre/cadastre.service.ts
+  s_aa9feb18eaf7eb::t_51e34715805d36 5,11,13-17,19-28,32,57,59-86,89,111,120,130,135-157,175-183,279,281-282,301-439
+src/platform/db/schema.ts
+  s_aa9feb18eaf7eb::t_564da5f7d5fe14 1-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "91dcf7fe6e91c1b62aaf784063574811b3a09d0a",
+  "prompts": {},
+  "sessions": {
+    "s_aa9feb18eaf7eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89cc9306-8d65-4e2d-89ad-d642ce6dbbd9",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
