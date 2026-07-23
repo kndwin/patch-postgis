@@ -113,6 +113,22 @@ contains a `lots` layer with `id` and `lot_number` properties. Zoom must be from
 0 through 22, and x/y must be valid XYZ coordinates for that zoom. Valid tiles
 without parcels return `200` with an empty MVT body.
 
+## ArcGIS compatibility query
+
+The bridge exposes a deliberately small ArcGIS REST-compatible endpoint for
+clients that already know the public cadastre layer URL. It supports only a
+single safe CADID equality predicate, GeoJSON in WGS84, and `outFields=*`:
+
+```sh
+curl -sS 'http://localhost:3000/arcgis/rest/services/public/NSW_Cadastre/MapServer/9/query?where=CADID%3D123&outFields=*&returnGeometry=true&f=geojson&outSR=4326'
+```
+
+The response is a GeoJSON `FeatureCollection`; each feature has `id`, the
+stored MultiPolygon geometry (or `null` when `returnGeometry=false`), and
+`CADID`/`LotDescription` properties. Unknown CADIDs return an empty collection.
+Malformed or unsupported query values return typed HTTP 400 responses. CORS is
+applied by the same server middleware as the other GET endpoints.
+
 ## Fake lot retrieval
 
 Start PostGIS, apply the migration, then insert a fake lot for manual verification:

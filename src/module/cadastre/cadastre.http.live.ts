@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 import { AppApi } from "../../platform/http/api.define";
 import { CadastreService } from "./cadastre.service";
+import { parseArcgisQuery } from "./cadastre.http.schema";
 
 export const CadastreLive = HttpApiBuilder.group(
   AppApi,
@@ -51,6 +52,39 @@ export const CadastreLive = HttpApiBuilder.group(
                 Effect.fail(new HttpApiError.InternalServerError()),
             }),
           );
+        }),
+      )
+      .handle(
+        "getArcgisLot",
+        Effect.fn("CadastreLive.getArcgisLot")(function* ({ query }) {
+          const parsed = parseArcgisQuery(query);
+          if (parsed._tag === "Invalid")
+            return yield* new HttpApiError.BadRequest();
+          const service = yield* CadastreService;
+          const lot = yield* service.getLot({ id: parsed.id }).pipe(
+            Effect.catchTags({
+              LotNotFoundError: () => Effect.succeed(null),
+              EffectDrizzleQueryError: () =>
+                Effect.fail(new HttpApiError.InternalServerError()),
+            }),
+          );
+          return {
+            type: "FeatureCollection" as const,
+            features:
+              lot === null
+                ? []
+                : [
+                    {
+                      type: "Feature" as const,
+                      id: lot.id,
+                      geometry: parsed.returnGeometry ? lot.geometry : null,
+                      properties: {
+                        CADID: lot.id,
+                        LotDescription: lot.lotNumber,
+                      },
+                    },
+                  ],
+          };
         }),
       ),
 );
