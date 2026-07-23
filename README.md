@@ -126,9 +126,10 @@ curl -i http://localhost:3000/lots/123
 curl -i http://localhost:3000/lots/missing
 ```
 
-The response is `{ "id": "123", "lotNumber": "FAKE-123" }`. The nullable geometry
-column and its GiST index are reserved for future PostGIS queries; no spatial SQL
-or geometry decoding is needed for this retrieval checkpoint.
+The response is `{ "id": "123", "lotNumber": "FAKE-123", "geometry": null }`.
+Imported lots include a GeoJSON `MultiPolygon` geometry in this field; it is null
+for rows created without geometry. The API uses `ST_AsGeoJSON` in the lookup
+query, while the GiST index remains available for spatial queries.
 
 The application uses Drizzle ORM `1.0.0-rc.4` through its
 `drizzle-orm/effect-postgres` integration and Effect SQL PostgreSQL

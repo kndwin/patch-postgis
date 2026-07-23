@@ -12,7 +12,7 @@ export const CadastreLive = HttpApiBuilder.group(
         "getLot",
         Effect.fn("CadastreLive.getLot")(function* ({ params }) {
           const service = yield* CadastreService;
-          const { id, lotNumber } = yield* service
+          const { id, lotNumber, geometry } = yield* service
             .getLot({ id: params.id })
             .pipe(
               Effect.catchTags({
@@ -23,7 +23,7 @@ export const CadastreLive = HttpApiBuilder.group(
               }),
             );
 
-          return { id, lotNumber };
+          return { id, lotNumber, geometry };
         }),
       )
       .handle(

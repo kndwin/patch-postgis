@@ -7,7 +7,15 @@ import { DbLive } from "./platform/db/client";
 
 const port = Number(process.env.PORT ?? 3000);
 
-const ServerLive = HttpRouter.serve(ApiLive).pipe(
+const CorsLive = HttpRouter.cors({
+  allowedOrigins: [],
+  allowedMethods: ["GET"],
+  allowedHeaders: ["Content-Type"],
+  maxAge: 86_400,
+  credentials: false,
+});
+
+const ServerLive = HttpRouter.serve(Layer.merge(ApiLive, CorsLive)).pipe(
   Layer.provide(BunHttpServer.layer({ port })),
   Layer.provide(
     Layer.effect(CadastreService)(CadastreService.make).pipe(

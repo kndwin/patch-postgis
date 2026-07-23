@@ -5,9 +5,14 @@ import { Db } from "../../platform/db/client";
 import { cadastreImportCheckpoints, cadastreLots } from "./cadastre.model";
 import type { CadastreLotRow } from "./cadastre.model";
 import { CadastreImportError, LotNotFoundError } from "./cadastre.schema";
-import { ringsToMultiPolygonCoordinates } from "./cadastre.geometry";
+import {
+  ringsToMultiPolygonCoordinates,
+  type MultiPolygonGeometry,
+} from "./cadastre.geometry";
 
-type LotResponse = Pick<CadastreLotRow, "id" | "lotNumber">;
+export type LotResponse = Pick<CadastreLotRow, "id" | "lotNumber"> & {
+  readonly geometry: MultiPolygonGeometry | null;
+};
 export const SYDNEY_LOT_QUERY =
   "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Land_Parcel_Property_Theme_multiCRS/FeatureServer/8/query";
 // Exactly one deliberate initial-import area, in WGS84: metropolitan Sydney
@@ -226,7 +231,13 @@ export class CadastreService extends Context.Service<
         readonly id: string;
       }) {
         const lot = yield* db
-          .select({ id: cadastreLots.id, lotNumber: cadastreLots.lotNumber })
+          .select({
+            id: cadastreLots.id,
+            lotNumber: cadastreLots.lotNumber,
+            // Cast to jsonb so node-postgres returns a GeoJSON object rather
+            // than the text representation produced by ST_AsGeoJSON.
+            geometry: sql<MultiPolygonGeometry | null>`ST_AsGeoJSON(${cadastreLots.geometry})::jsonb`,
+          })
           .from(cadastreLots)
           .where(eq(cadastreLots.id, id))
           .limit(1)
