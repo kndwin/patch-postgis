@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Patch PostGIS — MVT Viewer</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <div id="status-bar">
+      <span id="status-text">Loading…</span>
+      <label id="toggle-label">
+        <input id="toggle-parcels" type="checkbox" checked />
+        Parcels
+      </label>
+    </div>
+
+    <div id="error-panel" hidden>
+      <button id="error-close">&times;</button>
+      <pre id="error-body"></pre>
+    </div>
+
+    <div id="config-error" hidden>
+      <h2>Configuration Error</h2>
+      <p id="config-error-body"></p>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

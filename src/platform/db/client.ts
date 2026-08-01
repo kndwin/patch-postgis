@@ -10,6 +10,10 @@ const connectionString =
 export const PgClientLive = PgClient.layer({
   url: Redacted.make(connectionString),
   maxConnections: 10,
+  // Bounded wait when all connections are busy (e.g. concurrent Mapbox tile
+  // requests).  Without this, queued connection acquisition blocks forever,
+  // starving fibers and preventing pg_cancel_backend from reaching the pool.
+  connectTimeout: "5 seconds",
 });
 
 const dbEffect = PgDrizzle.makeWithDefaults();

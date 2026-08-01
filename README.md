@@ -27,77 +27,6 @@ Scalar documentation UI are available at the other two URLs. `DATABASE_URL`
 configures both `src/platform/db/client.ts` and Drizzle Kit; the service deliberately does
 not query the database from `/health`.
 
-## Real Sydney parcel import
-
-`bun run import` performs one bounded import and exits. It queries the official
-NSW Spatial Services ArcGIS REST **Lot (layer 8)** service from the official
-[NSW Land Parcel and Property Theme multiCRS](https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Land_Parcel_Property_Theme_multiCRS/FeatureServer/8).
-The hardcoded WGS84 envelope is `151.205,-33.889,151.214,-33.883` (Surry
-Hills, NSW). Source `cadid` is stored as the lot `id`. The display
-`lot_number` uses `lotidstring`, falling back to `lotnumber`; features with
-neither are skipped and reported (no synthetic `UNNUMBERED` value is created).
-Geometry is requested in EPSG:4326 and ingested as `MultiPolygon(4326)`. To
-avoid unstable offsets, the importer first requests all IDs for the bbox, then
-fetches those IDs in chunks of 100. `fetched` counts returned features,
-`upserted` counts rows with a usable lot number, and `skipped` counts missing-number
-features.
-
-```sh
-docker compose up -d postgres
-bunx drizzle-kit migrate
-bun run import
-docker compose exec -T postgres psql -U postgres -d patch_postgis -c 'select count(*) from cadastre_lots;'
-```
-
-This is intentionally not a synchronizer: it imports only this documented box
-and has no authentication, workflow, reconciliation, or generic ArcGIS layer.
-
-### Sydney + Western Sydney initial import
-
-`bun run import:sydney` imports the official layer 8 (`_multiCRS`) features that
-intersect this fixed WGS84 envelope: **`150.00,-34.35,151.35,-32.95`**
-(`xmin,ymin,xmax,ymax`). This padded rectangular extent covers the official
-Greater Sydney Region planning districts, including the Western City District;
-it is not a statewide import. A live source count on 23 July 2026 returned about
-1.43 million lots. The importer sends the envelope as ArcGIS
-`geometry` with `geometryType=esriGeometryEnvelope`, `inSR=4326`, and
-`spatialRel=esriSpatialRelIntersects`. It first takes exactly one
-`returnIdsOnly=true` snapshot, sorts OBJECTIDs numerically, and durably stores
-that snapshot in `cadastre_import_checkpoints`. Feature requests are POSTs of
-100 IDs, in waves of four; each response must return every requested OBJECTID
-and must not set `exceededTransferLimit`. A wave's upserts and checkpoint
-advancement are one transaction. Only the ID snapshot plus one four-batch wave
-is retained in memory. If Railway stops, rerun the same command: it resumes from
-the durable ID index and never discovers a new snapshot.
-Transient ArcGIS 408/429/5xx responses are retried with a bounded backoff; other
-failures terminate with a nonzero exit. The checkpoint is specific to this initial
-snapshot, so it is not a reconciliation or synchronization mechanism.
-
-On Railway, first deploy/apply the migration, then run this as a one-off job in the
-app service (with the app's `DATABASE_URL`):
-
-```sh
-railway ssh --service app --environment production -- \
-  "sh -lc 'cd /app && bunx drizzle-kit migrate'"
-railway ssh --service app --environment production -- \
-  "sh -lc 'cd /app && bun run import:sydney'"
-```
-
-Run it from a reviewed Railway environment, keep the process logs, and do not run
-multiple imports concurrently. `fetched`, `upserted`, and `skipped` are cumulative
-checkpoint counters; source count is measured by the importer logs, not guessed.
-Useful verification queries are:
-
-```sql
-SELECT source, next_object_id_index, cardinality(object_ids) AS snapshot_ids,
-       fetched, upserted, skipped, completed
-FROM cadastre_import_checkpoints
-WHERE source = 'greater-sydney-region-initial-cadastre-v1';
-SELECT count(*) AS lots, count(geometry) AS geometries FROM cadastre_lots;
-SELECT ST_SRID(geometry), count(*) FROM cadastre_lots GROUP BY 1;
-SELECT count(*) FROM cadastre_lots WHERE geometry IS NULL;
-```
-
 ## Vector tiles
 
 Cadastre parcels are served as Mapbox Vector Tiles:
@@ -171,6 +100,89 @@ Useful checks:
 bun run typecheck
 bun run lint
 bunx prettier --check .
+```
+
+## Cadastre sync
+
+The sync CLI imports cadastre parcels from a local ESRI File Geodatabase
+(`.gdb` directory) into the running PostGIS instance. It imports only the
+`Lot` layer, stages new rows in a fixed `cadastre_lots_staging` table,
+validates the result (rejecting zero-row snapshots), then atomically
+promotes the staging table in place of the live `cadastre_lots` table.
+Existing API routes (vector tiles, ArcGIS compatibility query, lot lookup)
+continue to serve the previous snapshot during sync and reflect the new data
+immediately after the promotion commits.
+
+### GDAL requirement
+
+When running directly on the host (not inside Docker), the sync CLI shells
+out to `ogr2ogr` from GDAL ≥ 3.6 with the OpenFileGDB driver. Install it:
+
+```sh
+# macOS
+brew install gdal
+
+# Debian / Ubuntu
+sudo apt-get install -y gdal-bin
+```
+
+The Docker image already includes `gdal-bin`; no extra setup is needed inside
+the container.
+
+### Choosing the GDB source
+
+The sync CLI resolves the FileGDB directory in this order:
+
+1. **CLI argument** — `bun run sync /data/NSW_Cadastre.gdb`
+2. **Environment variable** — `CADASTRE_FILEGDB_PATH` in `.env`
+3. **Fallback discovery** — newest `*.gdb` directory under `~/Downloads`
+
+```sh
+# Explicit path (highest priority)
+bun run sync /data/NSW_Cadastre.gdb
+
+# Use CADASTRE_FILEGDB_PATH from .env
+CADASTRE_FILEGDB_PATH=/data/NSW_Cadastre.gdb bun run sync
+
+# Fallback: auto-discover newest *.gdb in ~/Downloads
+bun run sync
+```
+
+### Snapshot and staging
+
+Each sync run follows these steps:
+
+1. Clean up any stale staging table from a previous failed run.
+2. Create the `cadastre_lots_staging` table with the exact DDL contract
+   (`id text PRIMARY KEY`, `lot_number text NOT NULL`,
+   `geometry geometry(MultiPolygon,4326)`).
+3. Run `ogr2ogr` against the `Lot` layer, appending rows into the pre-created
+   staging table. The layer query renames `cadid` → `id` and
+   `lotidstring` → `lot_number`, reprojects from EPSG:7844 to EPSG:4326,
+   and promotes single polygons to MultiPolygon.
+4. Build a GiST spatial index on the staging geometry column.
+5. Count the imported rows. An empty snapshot is rejected; the typed
+   staging DDL already constrains every geometry to `MultiPolygon,4326`.
+6. Inside a single PostgreSQL transaction: drop the live `cadastre_lots`
+   table, rename `cadastre_lots_staging` to `cadastre_lots`, and rename the
+   index to match the canonical `cadastre_lots_geometry_idx` name. The swap
+   is atomic — other sessions see either the old or the new table, never an
+   in-between state.
+7. If the sync fails before promotion, the live `cadastre_lots` table is
+   untouched. The staging table may persist on disk; the next sync run cleans
+   it up automatically (`DROP TABLE IF EXISTS`).
+
+No downtime is required, and existing API routes continue to return results
+from the previous snapshot throughout the sync.
+
+### Post-sync verification
+
+After a successful sync the existing endpoints work against the new data:
+
+```sh
+curl -i http://localhost:3000/health
+curl -sS 'http://localhost:3000/tiles/13/7536/4916.mvt' -o /tmp/tile.mvt
+curl -sS 'http://localhost:3000/arcgis/rest/services/public/NSW_Cadastre/MapServer/9/query?where=CADID%3D123&outFields=*&returnGeometry=true&f=geojson&outSR=4326'
 ```
 
 ## Railway deployment (native IaC)

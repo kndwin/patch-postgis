@@ -5,12 +5,11 @@
   "scripts": {
     "dev": "bun --watch src/main.ts",
     "start": "bun src/main.ts",
-    "import": "bun src/entrypoint/import.ts",
-    "import:sydney": "bun src/entrypoint/import-sydney.ts",
     "lint": "oxlint --type-aware src",
     "check": "bun run lint && bun run typecheck && prettier --check .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
+    "sync": "bun src/entrypoint/sync.ts",
     "test": "bun test"
   },
   "dependencies": {
@@ -28,5 +27,6 @@
     "prettier": "latest",
     "railway": "^3.5.10",
     "typescript": "latest"
-  }
+  },
+  "packageManager": "pnpm@10.33.4+sha512.1c67b3b359b2d408119ba1ed289f34b8fc3c6873412bec6fd264fbdc82489e510fcbecb9ce9d22dae7f3b76269d8441046014bdca53b9979cd7a561ad631b800"
 }
