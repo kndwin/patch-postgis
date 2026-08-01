@@ -1,0 +1,19 @@
+src/module/cadastre/cadastre.http.live.ts
+  s_aa9feb18eaf7eb::t_2d60fbce0c8591 2,50,56-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "35ec16d7c1d978e283db31910a017d93fb925958",
+  "prompts": {},
+  "sessions": {
+    "s_aa9feb18eaf7eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89cc9306-8d65-4e2d-89ad-d642ce6dbbd9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
