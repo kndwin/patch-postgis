@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import * as HttpServerResponse from "effect/unstable/http/HttpServerResponse";
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 import { AppApi } from "../../platform/http/api.define";
 import { CadastreService } from "./cadastre.service";
@@ -46,12 +47,22 @@ export const CadastreLive = HttpApiBuilder.group(
           )
             return yield* new HttpApiError.BadRequest();
           const service = yield* CadastreService;
-          return yield* service.getTile({ z, x, y }).pipe(
+          const tile = yield* service.getTile({ z, x, y }).pipe(
             Effect.catchTags({
               EffectDrizzleQueryError: () =>
                 Effect.fail(new HttpApiError.InternalServerError()),
             }),
           );
+          // Cadastre tiles are immutable for a given snapshot. A snapshot
+          // version in the tile URL (for example, ?v=20260801) makes this
+          // safe for browser and Railway CDN caches indefinitely.
+          return HttpServerResponse.uint8Array(tile, {
+            contentType: "application/vnd.mapbox-vector-tile",
+            headers: {
+              "cache-control":
+                "public, max-age=31536000, s-maxage=31536000, immutable",
+            },
+          });
         }),
       )
       .handle(
