@@ -61,6 +61,15 @@ same versioned filename, cache it indefinitely, and change the URL only for a
 new snapshot. The Railway API remains available for lot lookup and ArcGIS
 compatibility, and is the fallback when the variable is unset.
 
+The production R2 bucket is served through the Worker in
+`infra/cloudflare/tiles-worker`. It preserves byte-range responses and applies
+immutable cache and CORS headers. Deploy it with:
+
+```bash
+cd infra/cloudflare/tiles-worker
+wrangler deploy
+```
+
 If `VITE_MAPBOX_ACCESS_TOKEN` is missing, the app renders an in-page
 configuration error instead of a blank map.
 

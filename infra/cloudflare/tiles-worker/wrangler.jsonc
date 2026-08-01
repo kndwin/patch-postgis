@@ -1,0 +1,13 @@
+{
+  "name": "patch-postgis-tiles",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "account_id": "d549a47e154c5803519d3c312cfa6d1c",
+  "workers_dev": true,
+  "r2_buckets": [
+    {
+      "binding": "TILES",
+      "bucket_name": "patch-postgis-tiles"
+    }
+  ]
+}
