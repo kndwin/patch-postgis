@@ -1,0 +1,12 @@
+{
+  "name": "patch-postgis-tiles-worker",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "pmtiles": "4.4.1"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  },
+  "packageManager": "pnpm@10.33.4"
+}
