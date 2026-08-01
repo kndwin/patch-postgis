@@ -48,7 +48,8 @@ VITE_CADASTRE_PMTILES_URL=https://tiles.example.com/nsw-cadastre-20260801.pmtile
 ```
 
 The host must support `Range` requests, preserve the `.pmtiles` URL extension,
-and return permissive CORS headers. Build an archive from a FileGDB snapshot:
+and return permissive CORS headers. The R2 CORS policy to apply is committed at
+`infra/cloudflare/r2-cors.json`. Build an archive from a FileGDB snapshot:
 
 ```bash
 brew install tippecanoe pmtiles

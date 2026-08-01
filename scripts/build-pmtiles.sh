@@ -60,14 +60,13 @@ ogr2ogr \
     --description="NSW cadastral lots from FileGDB snapshot $version" \
     --minimum-zoom=14 \
     --maximum-zoom=18 \
-    --use-attribute-for-id=id \
     --no-feature-limit \
     --no-tile-size-limit \
     --detect-shared-borders \
     --no-simplification-of-shared-nodes \
     --temporary-directory="$temp_dir" \
     --force \
-    -
+    /dev/stdin
 
 pmtiles convert "$mbtiles" "$pmtiles"
 pmtiles verify "$pmtiles"
