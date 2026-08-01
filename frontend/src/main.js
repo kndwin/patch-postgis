@@ -3,6 +3,9 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 /* ── Configuration ─────────────────────────────────────────────────── */
 const ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+// An immutable PMTiles archive on object storage/CDN. Leave unset to retain
+// the live Railway MVT endpoint for local development and migration rollback.
+const CADASTRE_PMTILES_URL = import.meta.env.VITE_CADASTRE_PMTILES_URL;
 
 if (!ACCESS_TOKEN) {
   document.getElementById("config-error").hidden = false;
@@ -54,15 +57,24 @@ const map = new mapboxgl.Map({
 
 /* ── Vector parcel source (added once style is loaded) ─────────────── */
 map.on("style.load", () => {
-  map.addSource("parcels", {
+  const parcelSource = {
     type: "vector",
-    tiles: [`${location.origin}/tiles/{z}/{x}/{y}.mvt`],
     minzoom: 12,
     maxzoom: 22,
     // The tile payload exposes the lot id as a property rather than MVT's
     // optional numeric feature id. Promote it so feature-state can target lots.
     promoteId: "id",
-  });
+  };
+
+  if (CADASTRE_PMTILES_URL) {
+    // Mapbox GL JS reads the PMTiles directory and fetches only the byte ranges
+    // for visible tiles. The archive must be served with HTTP Range support.
+    parcelSource.url = CADASTRE_PMTILES_URL;
+  } else {
+    parcelSource.tiles = [`${location.origin}/tiles/{z}/{x}/{y}.mvt`];
+  }
+
+  map.addSource("parcels", parcelSource);
 
   /* ── Parcel fill ───────────────────────────────────────────────── */
   map.addLayer({

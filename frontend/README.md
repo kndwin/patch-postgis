@@ -33,8 +33,32 @@ cd frontend
 bun run dev     # → http://localhost:5173
 ```
 
-The Vite dev server proxies `/tiles` → `http://localhost:3000`, so the
-browser requests tiles same-origin at `/tiles/{z}/{x}/{y}.mvt`.
+The Vite dev server proxies `/tiles` → `http://localhost:3000`, so without a
+PMTiles URL the browser requests tiles same-origin at `/tiles/{z}/{x}/{y}.mvt`.
+
+## Static PMTiles production tiles
+
+The map can instead read a single immutable PMTiles archive from object storage
+and a CDN. Mapbox GL fetches only HTTP byte ranges for visible tiles, so this
+removes per-tile Railway, application, and PostGIS work. Set this build-time
+environment variable to switch sources:
+
+```bash
+VITE_CADASTRE_PMTILES_URL=https://tiles.example.com/nsw-cadastre-20260801.pmtiles
+```
+
+The host must support `Range` requests, preserve the `.pmtiles` URL extension,
+and return permissive CORS headers. Build an archive from a FileGDB snapshot:
+
+```bash
+brew install tippecanoe pmtiles
+scripts/build-pmtiles.sh /path/to/Lot_EPSG7844.gdb 20260801
+```
+
+This produces `build/pmtiles/nsw-cadastre-20260801.pmtiles`. Upload it with the
+same versioned filename, cache it indefinitely, and change the URL only for a
+new snapshot. The Railway API remains available for lot lookup and ArcGIS
+compatibility, and is the fallback when the variable is unset.
 
 If `VITE_MAPBOX_ACCESS_TOKEN` is missing, the app renders an in-page
 configuration error instead of a blank map.
