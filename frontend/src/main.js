@@ -1,4 +1,5 @@
 import mapboxgl from "mapbox-gl";
+import { Protocol } from "pmtiles";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 /* ── Configuration ─────────────────────────────────────────────────── */
@@ -20,6 +21,11 @@ if (!ACCESS_TOKEN) {
 }
 
 mapboxgl.accessToken = ACCESS_TOKEN;
+
+// Mapbox GL JS does not read PMTiles archives natively. Register the PMTiles
+// protocol handler so `pmtiles://` source URLs are resolved through HTTP ranges.
+const pmtilesProtocol = new Protocol();
+mapboxgl.addProtocol("pmtiles", pmtilesProtocol.tile);
 
 /* ── Sydney CBD ────────────────────────────────────────────────────── */
 const CENTER = [151.2093, -33.8688];
@@ -67,9 +73,9 @@ map.on("style.load", () => {
   };
 
   if (CADASTRE_PMTILES_URL) {
-    // Mapbox GL JS reads the PMTiles directory and fetches only the byte ranges
-    // for visible tiles. The archive must be served with HTTP Range support.
-    parcelSource.url = CADASTRE_PMTILES_URL;
+    // The protocol reads the archive directory and fetches only visible tiles.
+    // The archive must be served with HTTP Range support.
+    parcelSource.url = `pmtiles://${CADASTRE_PMTILES_URL}`;
   } else {
     parcelSource.tiles = [`${location.origin}/tiles/{z}/{x}/{y}.mvt`];
   }
