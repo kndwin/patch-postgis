@@ -1,0 +1,411 @@
+apps/browser/src/platform/routes.ts
+  s_f11aaa15ba7d97::t_90bf14847b3183 7
+  s_f11aaa15ba7d97::t_dfee293ff03aa1 4-6
+  s_f11aaa15ba7d97::t_8c48b7473423df 8-9
+  s_a64eff37eb16d1::t_852415cd52a582 1-3
+apps/browser/src/platform/components/ui/native-select.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-55
+apps/browser/src/platform/components/ui/popover.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-75
+apps/browser/src/platform/components/ui/direction.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1
+apps/browser/src/platform/components/ui/marker.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-68
+apps/browser/src/platform/components/ui/textarea.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-18
+apps/browser/src/platform/components/ui/badge.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-49
+apps/browser/src/platform/components/ui/sidebar.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-690
+apps/browser/src/platform/components/ui/bubble.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-124
+apps/browser/src/platform/components/ui/dialog.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-141
+apps/browser/src/platform/components/ui/button-group.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-78
+apps/browser/src/platform/components/ui/chart.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-339
+apps/browser/src/platform/components/ui/hover-card.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-46
+apps/browser/src/platform/components/ui/combobox.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-273
+apps/browser/src/platform/components/ui/label.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-20
+apps/browser/src/platform/components/ui/toggle-group.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-87
+apps/browser/src/platform/routes/root.tsx
+  s_f11aaa15ba7d97::t_bd8844978267be 10-12
+  s_46d4e8d1ff3913::t_08c2a2f9806150 1-9,13-14
+apps/server/src/platform/database/migration/20260804011649_add_workflow_execution_details/migration.sql
+  s_f11aaa15ba7d97::t_6e8ecf0e4f573d 1-2
+apps/browser/src/platform/components/ui/toggle.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-43
+apps/browser/src/platform/components/ui/message-scroller.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-128
+apps/browser/src/platform/components/ui/message.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-85
+apps/browser/src/platform/components/ui/empty.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-94
+apps/browser/src/platform/components/ui/alert.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-73
+apps/browser/src/platform/components/ui/command.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-179
+apps/browser/src/platform/components/ui/accordion.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 10-51
+  s_f11aaa15ba7d97::t_be6163b03cf7f4 1-9,52-70
+apps/browser/src/platform/components/ui/progress.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-66
+apps/browser/src/platform/components/ui/dropdown-menu.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-253
+apps/browser/src/platform/components/ui/table.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-87
+apps/server/src/module/cadastre/workflow/cadastre-workflow.model.ts
+  s_f11aaa15ba7d97::t_c4c7d2381b518d 15-16
+  s_dbeca79d6dfb98::t_48be5a18149262 1-14,17-59
+apps/browser/package.json
+  s_f11aaa15ba7d97::t_cba3599d462cb8 27
+  s_f11aaa15ba7d97::t_7ea2bc50d98dfd 24-26
+  s_f11aaa15ba7d97::t_35909cb1e693c1 28-30
+apps/browser/src/platform/http-client/client.ts
+  s_f11aaa15ba7d97::t_d2741e57449ba0 6
+  s_f11aaa15ba7d97::t_6cd3364fbca8bb 7
+  s_f11aaa15ba7d97::t_8e273d09e34631 2
+  s_f11aaa15ba7d97::t_78d4ec72cbb6a3 8-12
+  s_f11aaa15ba7d97::t_a7b22b77eed326 1
+  s_f11aaa15ba7d97::t_f4752de2098b35 3-5
+apps/browser/src/platform/components/ui/radio-group.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-36
+apps/browser/src/platform/components/ui/item.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-188
+apps/browser/src/platform/components/ui/tooltip.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 5-26
+  s_f11aaa15ba7d97::t_4aca6859367fb5 1-4,27-52
+apps/server/src/module/cadastre/workflow/cadastre-workflow.service.ts
+  s_f11aaa15ba7d97::t_5695687013ef31 3
+  s_f11aaa15ba7d97::t_db87bb526ba887 27
+  s_f11aaa15ba7d97::t_28a9747d96c824 2,10-12
+  s_f11aaa15ba7d97::t_cd71da2939c57d 1
+  s_f11aaa15ba7d97::t_e780eca1158da7 4-9
+  s_f11aaa15ba7d97::t_8ef9ddedb62750 13-15,24-26
+  s_f11aaa15ba7d97::t_e15b558176a64d 28-30
+apps/browser/src/platform/components/ui/alert-dialog.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-160
+apps/browser/src/module/dashboard/runs.atoms.ts
+  s_f11aaa15ba7d97::t_0677a6403c3c9c 1,3-4
+  s_f11aaa15ba7d97::t_6cb78fad6a477b 5,8-11,14-16,20-21
+  s_f11aaa15ba7d97::t_832307b7a6337d 2,12-13,17
+  s_f11aaa15ba7d97::t_68efc4a443b1b9 6-7
+  s_f11aaa15ba7d97::t_874ae62ae777c9 18-19
+apps/browser/src/platform/components/ui/button.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-56
+apps/browser/src/platform/components/ui/avatar.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-91
+apps/browser/src/platform/components/ui/carousel.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-229
+apps/browser/src/platform/components/ui/pagination.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-118
+apps/browser/src/platform/components/ui/input.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-20
+apps/browser/src/platform/components/ui/collapsible.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-15
+apps/browser/src/platform/components/ui/select.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-190
+apps/browser/src/platform/components/ui/checkbox.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-28
+apps/browser/src/platform/components/ui/slider.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-52
+apps/browser/src/platform/components/ui/separator.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-19
+apps/browser/src/platform/components/ui/card.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-85
+apps/browser/src/platform/components/ui/calendar.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-185
+apps/browser/src/platform/components/ui/drawer.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-209
+apps/browser/src/module/dashboard/runs.route.tsx
+  s_f11aaa15ba7d97::t_bead626baaed2d 1,6-8,10-19,31-35,199,209,283,296-297,299-303,305-306,317-334,336-337,340-341,343-344,346-352,382-391,393-402,442-444,446-472,475-496,498-505,507-515,654-661
+  s_f11aaa15ba7d97::t_0a09c47bb4047d 205,213
+  s_f11aaa15ba7d97::t_034629731fa17c 216-218,221,223
+  s_f11aaa15ba7d97::t_8035b49c85aff7 2
+  s_f11aaa15ba7d97::t_5522896d09c3e1 36-49
+  s_f11aaa15ba7d97::t_140222c6fa281c 339
+  s_f11aaa15ba7d97::t_c6edce99356615 3
+  s_f11aaa15ba7d97::t_97f9555d255ffd 20-27,29
+  s_f11aaa15ba7d97::t_bd5a2691961bbf 4-5,28,57-72,74,76-103,106-107,111,113-118,121-122,145,173,175,183-198,210-212,275-279,281-282,284-288,290-292,294,506,603-621,633-638,640-649,651-653
+  s_f11aaa15ba7d97::t_e39a2d98fa47ca 202
+  s_f11aaa15ba7d97::t_6f2207ed6995fe 335,342
+  s_f11aaa15ba7d97::t_7a2379b8c572bc 30
+  s_f11aaa15ba7d97::t_596a9f394cb09d 540-542
+  s_f11aaa15ba7d97::t_c741f48a5af65f 9,338,345,473-474
+  s_f11aaa15ba7d97::t_1e19f1b17402af 50-56,104-105,112,119-120,123-127,135-144,146-148,150-153,158-172,174,176-182
+  s_f11aaa15ba7d97::t_11302201509e88 566-568
+  s_f11aaa15ba7d97::t_d2741e57449ba0 293,650
+  s_f11aaa15ba7d97::t_98d46af398064a 108-110,128-134,149,154,557-561
+  s_f11aaa15ba7d97::t_1b1a92d7a877c9 200-201,206-208
+  s_f11aaa15ba7d97::t_b34fe97bb846e0 204,214-215,219-220,222,224-274
+  s_f11aaa15ba7d97::t_c9459b4505302b 295,298,304,307-316
+  s_f11aaa15ba7d97::t_ff166037d404ca 353-381,392,403-441,445,497,516-534,536-539,543-556,562-565,569-583,585-602,622-632,639
+  s_f11aaa15ba7d97::t_05cd3543d9e6db 155-157
+  s_f11aaa15ba7d97::t_47eb7aed0b0559 203
+  s_f11aaa15ba7d97::t_4174b1ff4e9899 280,289
+  s_f11aaa15ba7d97::t_d5221da160305b 73,75
+  s_f11aaa15ba7d97::t_86bbedbae2b960 535,584
+apps/browser/src/platform/components/ui/field.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-224
+apps/browser/src/module/dashboard/dashboard.route.tsx
+  s_f11aaa15ba7d97::t_9194811cae551f 27-69
+  s_f11aaa15ba7d97::t_41ebd0ab4c5119 17-19
+  s_f11aaa15ba7d97::t_c04a7aed5c817d 25
+  s_f11aaa15ba7d97::t_f07946f98bfa97 14-16
+  s_f11aaa15ba7d97::t_c31d904d82735c 20-24
+  s_f11aaa15ba7d97::t_30b7175c2a2391 26
+  s_f11aaa15ba7d97::t_128886dadaa93f 70-72
+  s_52dfdbe41f5412::t_92b60346f69193 1-13,73-76
+apps/browser/src/platform/components/ui/input-group.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-144
+apps/browser/src/platform/components/ui/navigation-menu.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-161
+apps/browser/src/platform/components/ui/skeleton.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-13
+apps/browser/src/platform/components/ui/menubar.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-265
+apps/browser/src/platform/components/ui/spinner.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-16
+apps/browser/src/platform/components/ui/switch.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-32
+apps/browser/src/platform/components/ui/toast.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-220
+apps/browser/src/platform/hooks/use-mobile.ts
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-18
+  s_f11aaa15ba7d97::t_02f1f9f9ee2681 19
+apps/browser/src/platform/components/ui/breadcrumb.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-103
+apps/browser/src/platform/components/ui/attachment.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-195
+apps/browser/src/platform/components/ui/sheet.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-131
+apps/browser/src/style.css
+  s_f11aaa15ba7d97::t_c741f48a5af65f 44,47,51,54,60,65,69,76,79,83,88,94,98,101,109,112,116,121,127,130,135,140,143,148,153,156,164,169,173,183,188,192,196,204,208-293
+  s_f11aaa15ba7d97::t_27a8a0c4db342b 41-43
+  s_f11aaa15ba7d97::t_064ddb91cd6c1c 45
+  s_f11aaa15ba7d97::t_552b7097ff871c 49-50
+  s_f11aaa15ba7d97::t_dc6a22788370a9 52-53
+  s_f11aaa15ba7d97::t_0e4d322cc4c923 55
+  s_f11aaa15ba7d97::t_65bc033de2e715 59
+  s_f11aaa15ba7d97::t_8502ea1f0bc879 61-64
+  s_f11aaa15ba7d97::t_e2d9fd927d3515 66-68
+  s_f11aaa15ba7d97::t_c59fcfc002d48c 70-75
+  s_f11aaa15ba7d97::t_f988da79ff1112 77-78
+  s_f11aaa15ba7d97::t_77b7d1a0d4270d 80-82
+  s_f11aaa15ba7d97::t_459a823197a3fc 84-87
+  s_f11aaa15ba7d97::t_076e8bc26e6bb1 89-93
+  s_f11aaa15ba7d97::t_19931cd2580725 95-97
+  s_f11aaa15ba7d97::t_c6c35b12a9caca 99-100
+  s_f11aaa15ba7d97::t_e22b7db654776b 102-104
+  s_f11aaa15ba7d97::t_3e67d22df33ec2 107-108
+  s_f11aaa15ba7d97::t_56df2ffe50bc66 110-111
+  s_f11aaa15ba7d97::t_e368cc84d1bd53 113-115
+  s_f11aaa15ba7d97::t_609cf16f695cb3 117-120
+  s_f11aaa15ba7d97::t_33a3d4388d9dbe 122-126
+  s_f11aaa15ba7d97::t_2f03007cb5beaa 128-129
+  s_f11aaa15ba7d97::t_053f551c91a897 131-134
+  s_f11aaa15ba7d97::t_ab85660938ec60 136-139
+  s_f11aaa15ba7d97::t_13e588376e6164 141-142
+  s_f11aaa15ba7d97::t_060abd7722f011 144-147
+  s_f11aaa15ba7d97::t_8e5d8d73d75c9b 149-152
+  s_f11aaa15ba7d97::t_ac8f6c5ec4c657 154-155
+  s_f11aaa15ba7d97::t_4c3e1fb5696f19 157-159,161-163
+  s_f11aaa15ba7d97::t_32b9c14fcf95c2 165-166
+  s_f11aaa15ba7d97::t_c17cb353a25afd 168
+  s_f11aaa15ba7d97::t_d5bd5de768ef6a 170-172
+  s_f11aaa15ba7d97::t_219036cacf8fb6 174-176
+  s_f11aaa15ba7d97::t_d3e188bc305bd8 181-182
+  s_f11aaa15ba7d97::t_66b96d07268cf4 184-187
+  s_f11aaa15ba7d97::t_7b489fc3952458 189-191
+  s_f11aaa15ba7d97::t_e2fd4b42551bb5 193-195
+  s_f11aaa15ba7d97::t_481198542b4031 197-199,201-203
+  s_f11aaa15ba7d97::t_f1c5f85f05cfbd 206-207
+  s_52dfdbe41f5412::t_bb1d6520927556 1-40,57,160,177-179,200
+apps/browser/src/platform/components/ui/aspect-ratio.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-22
+apps/browser/src/routeTree.gen.ts
+  s_f11aaa15ba7d97::t_52b26b2c78f40a 15-114
+  s_f11aaa15ba7d97::t_8859d76afe4eab 1-14,115-129
+apps/browser/src/platform/components/ui/input-otp.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-84
+apps/browser/src/module/dashboard/runs-filter.machine.ts
+  s_f11aaa15ba7d97::t_f4082e73fd775f 1,4-56,58
+  s_f11aaa15ba7d97::t_3ef229dfb15e26 2-3,57
+apps/browser/src/platform/components/ui/resizable.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-42
+apps/browser/src/platform/components/ui/scroll-area.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-49
+apps/browser/src/platform/components/ui/context-menu.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-242
+apps/server/src/module/cadastre/workflow/cadastre-workflow.repo.ts
+  s_f11aaa15ba7d97::t_7f732a6c966ad5 1-162
+  s_f11aaa15ba7d97::t_082fd54376f23c 163-165
+apps/browser/src/platform/components/ui/tabs.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-75
+apps/browser/src/platform/components/ui/kbd.tsx
+  s_f11aaa15ba7d97::t_c741f48a5af65f 1-26
+apps/server/src/module/cadastre/workflow/cadastre-workflow.http-api.live.ts
+  s_f11aaa15ba7d97::t_45f222e498dfe8 2-60
+  s_f11aaa15ba7d97::t_ef5f7a5325db04 1
+  s_f11aaa15ba7d97::t_0ce1f98bba0533 61-63
+apps/browser/vite.config.ts
+  s_f11aaa15ba7d97::t_3ca2d7b4165045 4
+  s_f11aaa15ba7d97::t_6dfb32320e9ea9 10
+  s_f11aaa15ba7d97::t_c0baebc90b6959 2-3
+  s_f11aaa15ba7d97::t_c6193cbce09918 8-9
+  s_f11aaa15ba7d97::t_4f25c578ea52d6 11-13
+  s_f11aaa15ba7d97::t_f444a37f7c29f7 6,14-17
+AGENTS.md
+  s_1826696c653d9f::t_279799f68561ee 1-9
+apps/browser/.env.example
+  s_1826696c653d9f::t_ccbcd343c1f163 1-6
+apps/browser/.prettierignore
+  s_aa9feb18eaf7eb::t_ddbcbb36d82c4c 1
+apps/server/src/module.activity.lint.ts
+  s_2c7fc29553a80d::t_e06136e6a6f721 1
+apps/server/src/module.cron.lint.ts
+  s_2c7fc29553a80d::t_0f22693b8b633b 1
+apps/server/src/module.define.lint.ts
+  s_2c7fc29553a80d::t_d0c431550cf9c1 1
+apps/server/src/module.http-api.lint.ts
+  s_2c7fc29553a80d::t_3caaaecec291de 1
+apps/server/src/module.live.lint.ts
+  s_2c7fc29553a80d::t_a77feda51b5d6b 1
+apps/server/src/module.model.lint.ts
+  s_2c7fc29553a80d::t_983479fc5c6ab0 1
+apps/server/src/module.repo.lint.ts
+  s_2c7fc29553a80d::t_ec38666f5c911a 1
+apps/server/src/module.schema.lint.ts
+  s_2c7fc29553a80d::t_bc8e0fd6d18ab7 1
+apps/server/src/module.service.lint.ts
+  s_2c7fc29553a80d::t_87442a405d674f 1
+apps/server/src/module.workflow.lint.ts
+  s_2c7fc29553a80d::t_36bded6f21167e 1
+apps/server/src/module/cadastre/sync/cadastre-sync.service.ts
+  s_111e2546751c73::t_7d76832dedbbfe 4-7,13-15,90,134,144,220,247,295,300,305,309-312,314-322,333-340,348,363-369,407-413,441,444-445,449-450,457-484,487-500,505
+apps/server/src/module/cadastre/workflow/activity/wait-cadastre-email.activity.schema.ts
+  s_a282fc0f19d230::t_0f8016c801e824 1-22
+apps/server/src/platform/cloudflare/email/sample.eml
+  s_11f54cba98f8bf::t_fb4cb0f22c7e51 1-8
+apps/server/src/platform/http/cors.ts
+  s_11f54cba98f8bf::t_c98b5100c5bbd8 3,5
+infra/dev/cloudflare.ts
+  s_a282fc0f19d230::t_9a2101ffda6bd5 1-53
+packages/http-contract/src/cadastre.schema.ts
+  s_d2fee789a5586c::t_64145779204a58 2,9,11,13-14,18,20,35,41-79
+packages/http-contract/src/system.http-api.ts
+  s_d2fee789a5586c::t_1b6e1a9285451c 2-8
+packages/http-contract/src/workflow.schema.ts
+  s_d2fee789a5586c::t_11a4a0ba593d9c 1-52
+pnpm-lock.yaml
+  s_a282fc0f19d230::t_a6bf5b7f8a9ef7 11-13,15-170,172-196,200-475,486-491,498-503,510-515,522-527,534-539,546-604,606-714,722-727,734-739,746-751,758-763,770-775,782-787,794-799,806-811,818-823,830-835,842-847,854-859,866-871,878-883,890-895,902-907,914-919,926-931,938-943,950-955,962-967,974-975,980-991,998-1003,1010-1015,1022-1062,1064-1091,1095-1096,1100-1161,1163-1164,1168-1169,1173-1174,1178-1179,1183-1185,1188-1191,1193-1195,1200-1305,1307,1309-1323,1325-1336,1339-1341,1346-1349,1351,1353-1355,1360-1362,1367-1376,1381-1383,1388-1390,1395-1399,1401-1403,1407-1409,1413-1415,1419-1422,1424-1427,1429-1432,1434-1437,1439-1442,1444-1447,1449-1453,1455-1459,1461-1465,1467-1471,1473-1477,1479-1483,1485-1489,1491-1496,1498-1503,1505-1510,1512-1517,1519-1524,1526-1531,1533-1538,1540-1545,1547-1551,1553-1557,1559-1563,1565-1569,1571-1573,1575-1576,1578-1594,1596-2017,2019-8950,8952,8954,8956-8970,8972-8974,8976,8978,8980-8985,8987,8989,8991-9029,9031-9033,9035,9037,9039-9040,9042,9044-9047,9049-9055,9057-9063,9065,9067,9069,9071,9073-9076,9078,9080,9082-9084,9086,9088,9090-9092,9094,9096,9098,9100,9102,9104,9106-9110,9112-9115,9117-9119,9121-9125,9127-9129,9131-9133,9135,9137,9139,9141-9143,9145-9155,9157-9161,9163,9165,9167,9169,9171-9174,9176,9178,9180-9182,9184,9186,9188,9190-9192,9194-9197,9199,9201,9203-9207,9209,9211-9213,9215,9217,9219,9221,9223,9225-9227,9229-9252,9254,9256,9258-9260,9262,9264,9266,9268,9270-9279,9281-9285,9287-9292,9294-9300,9302-9304,9306,9308,9310,9312,9314,9316,9318-9343,9345,9347-9384,9386,9388,9390-9392,9394,9396-9397,9399-9402,9404,9406,9408-9410,9412-9415,9417,9419-9427,9436,9438,9440-9455,9457,9459-9471,9473-9474,9476,9478-9482
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "2023ab12439139a0fa1bcb361f1386fe7a55c00b",
+  "prompts": {},
+  "sessions": {
+    "s_111e2546751c73": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a1bf8e23-2f7c-4207-b715-657c591e256f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_11f54cba98f8bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d3617d6a-9828-48f8-badd-9a8bc7434835",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_1826696c653d9f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9a92d1e1-1186-4329-b420-4ad629097b06",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_2c7fc29553a80d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8c2e7fac-af39-4224-873e-2564a3f29e23",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_46d4e8d1ff3913": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb81ce72-a210-4952-93b0-934643d17a1e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_52dfdbe41f5412": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a9777a8e3df6186c4",
+        "model": "unknown"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_a282fc0f19d230": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c9478c1-111f-4648-ad4f-b9c8d9851e54",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_a64eff37eb16d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-afb50a29e6e6521fc",
+        "model": "unknown"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_aa9feb18eaf7eb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "89cc9306-8d65-4e2d-89ad-d642ce6dbbd9",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_d2fee789a5586c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5cb929cc-49ec-47a3-a675-1db71aef8a9b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_dbeca79d6dfb98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dc997404-9233-4efb-9156-b265afdba99f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    },
+    "s_f11aaa15ba7d97": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "359f2c5f-bc12-41c6-a7a8-e16ae494c960",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
