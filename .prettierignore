@@ -1,2 +1,4 @@
 # Generated frontend bundle output
 frontend/dist/
+apps/browser/src/routeTree.gen.ts
+**/.cache/

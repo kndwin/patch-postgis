@@ -4,12 +4,16 @@
     "typeAware": true,
     "typeCheck": true
   },
+  "jsPlugins": ["./apps/server/.cache/module.architecture.lint.js"],
   "rules": {
     "typescript/no-explicit-any": "error",
     "typescript/no-floating-promises": "error",
     "typescript/no-misused-promises": "error",
     "typescript/no-unused-vars": "error",
-    "no-unused-vars": "error"
+    "no-unused-vars": "error",
+    "module-architecture/module-suffixes": "error",
+    "module-architecture/no-effect-gen": "error",
+    "module-architecture/no-new-date": "error"
   },
-  "ignorePatterns": ["node_modules/**", "drizzle/**"]
+  "ignorePatterns": ["node_modules/**"]
 }

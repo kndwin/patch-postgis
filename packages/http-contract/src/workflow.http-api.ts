@@ -1,0 +1,33 @@
+import { Schema } from "effect";
+import { HttpApiEndpoint, HttpApiError, HttpApiGroup } from "effect/unstable/httpapi";
+import { ActivitySchema, ExecutionSchema, ScheduleSchema } from "./workflow.schema";
+
+const query = { cursor: Schema.optional(Schema.String), limit: Schema.optional(Schema.String) };
+const internalError = [HttpApiError.InternalServerErrorNoContent] as const;
+
+export const workflowGroup = HttpApiGroup.make("workflow").add(
+  HttpApiEndpoint.get("listWorkflows", "/workflows", {
+    query,
+    success: Schema.Struct({
+      items: Schema.Array(ExecutionSchema),
+      nextCursor: Schema.NullOr(Schema.String),
+    }),
+    error: internalError,
+  }),
+  HttpApiEndpoint.get("getWorkflow", "/workflows/:id", {
+    params: { id: Schema.String },
+    success: Schema.NullOr(
+      Schema.Struct({ ...ExecutionSchema.fields, activities: Schema.Array(ActivitySchema) }),
+    ),
+    error: internalError,
+  }),
+  HttpApiEndpoint.get("listSchedules", "/schedules", {
+    query,
+    success: Schema.Struct({
+      schedules: Schema.Array(ScheduleSchema),
+      occurrences: Schema.Array(Schema.Unknown),
+      nextCursor: Schema.NullOr(Schema.String),
+    }),
+    error: internalError,
+  }),
+);

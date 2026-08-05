@@ -1,0 +1,37 @@
+{
+  "name": "@patch/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "portless api -- bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "build": "tsc --noEmit",
+    "lint": "bun run lint:plugin && oxlint --type-aware src",
+    "lint:plugin": "bun build src/module.architecture.lint.ts --outfile .cache/module.architecture.lint.js --target node",
+    "check": "bun run lint && bun run typecheck && oxfmt --check .",
+    "typecheck": "tsc --noEmit",
+    "format": "oxfmt --write .",
+    "sync": "bun src/module/cadastre/sync/cadastre-sync.cli.ts",
+    "pmtiles:fixture": "bun src/platform/scripts/build-pmtiles.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.0-beta.102",
+    "@effect/sql-pg": "4.0.0-beta.102",
+    "@patch/http-contract": "workspace:*",
+    "drizzle-orm": "1.0.0-rc.4",
+    "effect": "4.0.0-beta.102",
+    "effect-cf": "0.17.1",
+    "postal-mime": "^2.7.5"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260801.1",
+    "@types/bun": "latest",
+    "drizzle-kit": "1.0.0-rc.4",
+    "effect-oxlint": "^0.2.0",
+    "oxlint": "^1.60.0",
+    "oxlint-tsgolint": "^0.21.0",
+    "railway": "^3.5.10",
+    "typescript": "7.0.2"
+  }
+}

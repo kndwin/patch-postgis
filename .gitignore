@@ -1,4 +1,10 @@
 node_modules
+.cache
 .env
+.env.*
+!.env.example
 .DS_Store
-build/pmtiles/
+build/
+dist/
+.alchemy/
+.wrangler/

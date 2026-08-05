@@ -1,0 +1,8 @@
+From: sender@example.test
+To: cadastre-export-staging@decoco.work
+Subject: staging cadastre export
+Message-ID: <sample-cadastre-export@example.test>
+Date: Wed, 05 Aug 2026 00:00:00 +0000
+Content-Type: text/plain; charset=utf-8
+
+This is a local staging fixture.

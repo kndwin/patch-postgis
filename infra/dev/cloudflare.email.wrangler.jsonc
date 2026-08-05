@@ -1,0 +1,19 @@
+{
+  "name": "cadastre-email-staging-local",
+  "main": "../../apps/server/src/platform/cloudflare/email/email.worker-handler.ts",
+  "compatibility_date": "2026-08-04",
+  "vars": {
+    "CADASTRE_INGESTION_URL": "http://localhost:3456/email-ingestions",
+    "CADASTRE_INGESTION_TOKEN": "test-token",
+    "LOCAL_TRACE_HELLO": "true",
+  },
+  "r2_buckets": [
+    {
+      "binding": "EMAIL_ARCHIVE",
+      "bucket_name": "cadastre-email-staging-local",
+    },
+  ],
+  "observability": {
+    "traces": { "enabled": true, "head_sampling_rate": 1 },
+  },
+}
