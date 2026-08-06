@@ -1,0 +1,96 @@
+apps/server/Dockerfile
+  h_ba3efde196eb39 1-12,15,19-21
+apps/server/src/module/cadastre/sync/cadastre-sync-status.service.ts
+  h_ba3efde196eb39 1-2,6-9,46-49,55,63,67-72
+apps/server/src/module/cadastre/sync/cadastre-sync.model.ts
+  h_ba3efde196eb39 11
+apps/server/src/module/cadastre/sync/cadastre-sync.service.ts
+  h_ba3efde196eb39 5,32-53,84,86-87,90,92,120,133-142,222-227,231,234,254-255,268-285,287-294,327-473,475-476,518-519,521-524,532,540-541,543-544,548
+apps/server/src/module/cadastre/sync/cadastre-sync.test.ts
+  h_ba3efde196eb39 5-40,48,51-56,64-65,69,71,76-81,91-93,97,100-101,109,111-120,124-125,129-130,141-151,160-161,178-182,184,188-192,195,199-203,208-212,219-223,230-234,242-246
+apps/server/src/module/cadastre/workflow/activity/build-pmtiles.activity.schema.ts
+  h_ba3efde196eb39 1-18
+apps/server/src/module/cadastre/workflow/activity/build-pmtiles.activity.test.ts
+  h_ba3efde196eb39 1-23
+apps/server/src/module/cadastre/workflow/activity/build-pmtiles.activity.ts
+  h_ba3efde196eb39 1-4,6-23,25-315
+apps/server/src/module/cadastre/workflow/activity/cadastre-workflow-error.schema.ts
+  h_ba3efde196eb39 32-39,48-49
+apps/server/src/module/cadastre/workflow/activity/download-gdb.activity.schema.ts
+  h_ba3efde196eb39 5,8-13
+apps/server/src/module/cadastre/workflow/activity/download-gdb.activity.ts
+  h_ba3efde196eb39 1-2,4-15,17-25,29-94
+apps/server/src/module/cadastre/workflow/activity/extract-download-link.activity.ts
+  h_ba3efde196eb39 3,61
+apps/server/src/module/cadastre/workflow/activity/import-postgis.activity.schema.ts
+  h_ba3efde196eb39 1-14
+apps/server/src/module/cadastre/workflow/activity/import-postgis.activity.ts
+  h_ba3efde196eb39 1,3-16,18-215
+apps/server/src/module/cadastre/workflow/activity/index.ts
+  h_ba3efde196eb39 18
+apps/server/src/module/cadastre/workflow/activity/request-dataset-api.activity.ts
+  h_ba3efde196eb39 4,91-93,96-98,131-139
+apps/server/src/module/cadastre/workflow/activity/upload.activity.schema.ts
+  h_ba3efde196eb39 1-3
+apps/server/src/module/cadastre/workflow/activity/upload.activity.ts
+  h_ba3efde196eb39 1,3-15,17-74
+apps/server/src/module/cadastre/workflow/activity/validate-promote.activity.schema.ts
+  h_ba3efde196eb39 1-10
+apps/server/src/module/cadastre/workflow/activity/validate-promote.activity.ts
+  h_ba3efde196eb39 3-10,12-33
+apps/server/src/module/cadastre/workflow/activity/verify-publish.activity.schema.ts
+  h_ba3efde196eb39 1-11
+apps/server/src/module/cadastre/workflow/activity/verify-publish.activity.ts
+  h_ba3efde196eb39 1,3-23,25-174
+apps/server/src/module/cadastre/workflow/activity/wait-cadastre-email.activity.ts
+  h_ba3efde196eb39 1,28,43
+apps/server/src/module/cadastre/workflow/cadastre-workflow.cron.ts
+  h_ba3efde196eb39 4,10-12,19,25
+apps/server/src/module/cadastre/workflow/cadastre-workflow.repo.test.ts
+  h_ba3efde196eb39 1-35
+apps/server/src/module/cadastre/workflow/cadastre-workflow.repo.ts
+  h_ba3efde196eb39 2,20-60,84-111,123-139,212-221,265-335
+apps/server/src/module/cadastre/workflow/cadastre-workflow.runtime.live.ts
+  h_ba3efde196eb39 5-6,19-22
+apps/server/src/module/cadastre/workflow/cadastre-workflow.workflow.ts
+  h_ba3efde196eb39 1,15-19,37,50-52,54-60,62-65,67-70,72,74,76-127,133
+apps/server/src/module/cadastre/workflow/workflow-projection.activity.ts
+  h_ba3efde196eb39 1-66
+apps/server/src/platform/cadastre/pmtiles.boundary.test.ts
+  h_ba3efde196eb39 1-62
+apps/server/src/platform/cadastre/pmtiles.boundary.ts
+  h_ba3efde196eb39 1-72
+apps/server/src/platform/cloudflare/artifact/artifact.boundary.ts
+  h_ba3efde196eb39 1-40
+apps/server/src/platform/cloudflare/artifact/artifact.worker-handler.ts
+  h_ba3efde196eb39 1-173
+apps/server/src/platform/cloudflare/artifact/artifact.worker.test.ts
+  h_ba3efde196eb39 1-63
+apps/server/src/platform/cloudflare/tiles/tiles.publish-routing.ts
+  h_ba3efde196eb39 1-17
+apps/server/src/platform/cloudflare/tiles/tiles.worker-boundary.ts
+  h_ba3efde196eb39 1-75
+apps/server/src/platform/cloudflare/tiles/tiles.worker-handler.test.ts
+  h_ba3efde196eb39 1-98
+apps/server/src/platform/cloudflare/tiles/tiles.worker-handler.ts
+  h_ba3efde196eb39 4-6,14-15,20-214,233,236,240-244,259-263
+apps/server/src/platform/database/migration/20260807120000_pmtiles_object_key/migration.sql
+  h_ba3efde196eb39 1
+docs/cadastre-workflow.md
+  h_ba3efde196eb39 3-48,51
+infra/prod/cloudflare.ts
+  h_ba3efde196eb39 33-50,93-98,108-124,133-135
+infra/prod/railway.ts
+  h_ba3efde196eb39 11-16,45-47,51-55,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9c42f1492194ea919f2cc0f317de0c488d44b11b",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
