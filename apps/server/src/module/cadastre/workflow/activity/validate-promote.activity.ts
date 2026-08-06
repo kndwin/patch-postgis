@@ -1,16 +1,33 @@
 import { Effect } from "effect";
 import { Activity } from "effect/unstable/workflow";
-import { CadastreActivityErrorSchema } from "./validate-promote.activity.schema";
-import { CadastreWorkflowNotImplemented } from "./cadastre-workflow-error.schema";
+import { projectActivity } from "../workflow-projection.activity";
+import { CadastreSyncService } from "../../sync/cadastre-sync.service";
+import {
+  CadastreActivityErrorSchema,
+  ValidatePromoteInputSchema,
+  ValidatePromoteSuccessSchema,
+} from "./validate-promote.activity.schema";
+import { CadastreWorkflowPostgisError } from "./cadastre-workflow-error.schema";
 
-/** Explicit mock boundary; no validation or promotion occurs. */
-export const ValidatePromoteActivity = Activity.make({
-  name: "CadastreSyncWorkflow/validate-promote",
-  error: CadastreActivityErrorSchema,
-  execute: Effect.fail(
-    new CadastreWorkflowNotImplemented({
-      activity: "validate-promote",
-      message: "Activity is not implemented: validate-promote",
-    }),
-  ),
-});
+export const ValidatePromoteActivity = (input: typeof ValidatePromoteInputSchema.Type) =>
+  Activity.make({
+    name: "CadastreSyncWorkflow/validate-promote",
+    error: CadastreActivityErrorSchema,
+    success: ValidatePromoteSuccessSchema,
+    execute: projectActivity(
+      "validate-promote",
+      Effect.fn("CadastreSyncWorkflow.validatePromote.execute")(function* () {
+        const service = yield* CadastreSyncService;
+        return yield* service
+          .validateAndPromote(input)
+          .pipe(Effect.mapError((e) => new CadastreWorkflowPostgisError({ message: e.message })));
+      })().pipe(
+        Effect.mapError(
+          (e) =>
+            new CadastreWorkflowPostgisError({
+              message: e instanceof Error ? e.message : "PostGIS promotion failed",
+            }),
+        ),
+      ),
+    ),
+  });

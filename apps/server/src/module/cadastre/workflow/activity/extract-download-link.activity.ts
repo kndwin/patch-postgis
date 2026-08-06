@@ -1,5 +1,6 @@
 import { Effect, Schema } from "effect";
 import { Activity } from "effect/unstable/workflow";
+import { projectActivity } from "../workflow-projection.activity";
 import {
   CadastreActivityErrorSchema,
   CadastreDownloadLinkError,
@@ -57,5 +58,5 @@ export const ExtractDownloadLinkActivity = (input: Schema.Schema.Type<typeof inp
     name: "CadastreSyncWorkflow/extract-download-link",
     success: Schema.String,
     error: CadastreActivityErrorSchema,
-    execute: extractDownloadLink(input),
+    execute: projectActivity("extract-download-link", extractDownloadLink(input)),
   });

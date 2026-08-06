@@ -1,8 +1,12 @@
-import { desc } from "drizzle-orm";
-import { Effect, Context } from "effect";
+import { desc, eq } from "drizzle-orm";
+import { Effect, Context, Config } from "effect";
 import { EffectDrizzleQueryError } from "drizzle-orm/effect-core";
 import { Db } from "../../../platform/database/client";
 import { cadastreSnapshots, cadastreSyncRuns } from "./cadastre-sync.model";
+import {
+  encodedPublicTileUrl,
+  normalizeTileBaseUrl,
+} from "../../../platform/cadastre/pmtiles.boundary";
 
 export type SnapshotStatus = {
   readonly version: string;
@@ -39,11 +43,16 @@ export class CadastreStatusService extends Context.Service<
 >()("CadastreStatusService", {
   make: Effect.fn("CadastreStatusService.make")(function* () {
     const db = yield* Db;
+    const configuredTileUrl = yield* Config.string("CADASTRE_TILE_URL").pipe(
+      Config.withDefault(""),
+    );
+    const tileUrl = normalizeTileBaseUrl(configuredTileUrl);
     return {
       currentSnapshot: Effect.fn("CadastreStatusService.currentSnapshot")(function* () {
         const row = yield* db
           .select()
           .from(cadastreSnapshots)
+          .where(eq(cadastreSnapshots.pmtilesStatus, "published"))
           .orderBy(desc(cadastreSnapshots.importedAt))
           .limit(1)
           .pipe(Effect.map((rows) => rows[0]));
@@ -51,11 +60,16 @@ export class CadastreStatusService extends Context.Service<
           ? null
           : {
               version: row.version,
-              source: row.source,
+              source: "NSW Spatial Services",
               lotCount: row.lotCount,
               importedAt: row.importedAt.toISOString(),
               pmtilesStatus: row.pmtilesStatus,
-              pmtilesUrl: row.pmtilesUrl,
+              pmtilesUrl:
+                row.pmtilesStatus === "published" &&
+                row.pmtilesObjectKey !== null &&
+                tileUrl !== null
+                  ? encodedPublicTileUrl(tileUrl, row.pmtilesObjectKey)
+                  : null,
             };
       }),
       runs: Effect.fn("CadastreStatusService.runs")(function* () {

@@ -1,3 +1,4 @@
+import { projectActivity } from "../workflow-projection.activity";
 import { DateTime, Duration, Effect, Schema } from "effect";
 import { Activity, DurableClock } from "effect/unstable/workflow";
 import { CadastreEmailIngestionService } from "../cadastre-email-ingestion.service";
@@ -24,7 +25,7 @@ const lookupCadastreEmail = Effect.fn("WaitCadastreEmailActivity.lookup")(functi
   const ingestion = yield* CadastreEmailIngestionService;
   const row = yield* ingestion
     .findNewestAfter(input.emailAddress, DateTime.toDate(DateTime.makeUnsafe(input.requestedAt)))
-    .pipe(Effect.mapError((error) => new CadastreEmailLookupError({ message: String(error) })));
+    .pipe(Effect.mapError(() => new CadastreEmailLookupError({ message: "Email lookup failed" })));
   return row === null
     ? null
     : Schema.decodeUnknownSync(WaitCadastreEmailLookupResultSchema)({
@@ -39,7 +40,7 @@ export const lookupCadastreEmailActivity = (input: CadastreEmailWaitInput, poll:
     name: activityName(input, poll),
     success: WaitCadastreEmailLookupResultSchema,
     error: WaitCadastreEmailLookupErrorSchema,
-    execute: lookupCadastreEmail(input),
+    execute: projectActivity("wait-cadastre-email/*", lookupCadastreEmail(input)),
   });
 
 const EmailPollInterval = Duration.minutes(30);

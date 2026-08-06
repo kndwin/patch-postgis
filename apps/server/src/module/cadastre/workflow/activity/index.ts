@@ -15,6 +15,7 @@ export {
   CadastreWorkflowHttpError,
   CadastreWorkflowJsonError,
   CadastreWorkflowNotImplemented,
+  CadastreWorkflowPostgisError,
   CadastreWorkflowProviderError,
   CadastreDownloadLinkError,
 } from "./cadastre-workflow-error.schema";

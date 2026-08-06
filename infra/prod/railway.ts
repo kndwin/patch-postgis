@@ -8,7 +8,12 @@ export default defineRailway((ctx) => {
   const postgisData = volume("postgis-data", {
     // Volumes are regional. Keep the database service in the same Railway region.
     region: singaporeRegion,
-    sizeMB: 4096,
+    sizeMB: 40_960,
+  });
+
+  const cadastreWork = volume("cadastre-work", {
+    region: singaporeRegion,
+    sizeMB: 51_200,
   });
 
   const postgis = service("postgis", {
@@ -37,15 +42,23 @@ export default defineRailway((ctx) => {
     start: "bun src/main.ts",
     preDeploy: "bunx --bun drizzle-kit migrate --config /app/drizzle.config.ts",
     healthcheck: "/health",
+    volumeMounts: {
+      "/data/cadastre": cadastreWork,
+    },
     env: {
       DATABASE_URL: postgis.env.DATABASE_URL,
       CADASTRE_EXPORT_EMAIL: "cadastre-export@decoco.work",
+      CADASTRE_ARTIFACT_URL: ctx.shared.CADASTRE_ARTIFACT_URL,
+      CADASTRE_ARTIFACT_TOKEN: ctx.shared.CADASTRE_ARTIFACT_TOKEN,
+      CADASTRE_WORK_DIR: "/data/cadastre",
+      CADASTRE_TILE_URL: ctx.shared.CADASTRE_TILE_URL,
+      CADASTRE_TILE_PUBLISH_TOKEN: ctx.shared.CADASTRE_TILE_PUBLISH_TOKEN,
       // Keep the app listener aligned with the Railway domain target port.
       PORT: "3000",
     },
   });
 
   return project("patch-postgis", {
-    resources: [postgis, app, postgisData],
+    resources: [postgis, app, postgisData, cadastreWork],
   });
 });

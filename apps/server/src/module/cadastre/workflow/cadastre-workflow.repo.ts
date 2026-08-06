@@ -1,5 +1,5 @@
 import { Context, DateTime, Effect, Layer } from "effect";
-import { desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, lt, notInArray, sql } from "drizzle-orm";
 import { EffectDrizzleQueryError } from "drizzle-orm/effect-core";
 import { Db } from "../../../platform/database/client";
 import type { WorkflowActivityAttempt, WorkflowExecution } from "./cadastre-workflow.model";
@@ -16,6 +16,47 @@ interface WorkflowStep {
   readonly startedAt: string;
   readonly finishedAt: string | null;
 }
+
+export const WorkflowProjectionError = "Workflow projection update failed";
+export const safeActivityError = () => "Activity failed";
+
+/** Activity failures are details on a running execution; the workflow finalizer owns terminal state. */
+export const activityWorkflowStatus = (_status: "completed" | "failed") => "running" as const;
+
+export const attemptId = (executionId: string, activityName: string, attempt: number) =>
+  `activity-${Buffer.from(`${executionId}\0${activityName}\0${attempt}`).toString("base64url")}`;
+
+export const workflowStepNames = [
+  "request-dataset-api",
+  "wait-cadastre-email/*",
+  "extract-download-link",
+  "download-gdb",
+  "import-postgis",
+  "validate-promote",
+  "build-pmtiles",
+  "upload",
+  "verify-publish",
+] as const;
+
+export const initialSteps = (at: string): readonly WorkflowStep[] =>
+  workflowStepNames.map((name) => ({ name, status: "pending", startedAt: at, finishedAt: null }));
+
+export const transitionSteps = (
+  steps: readonly WorkflowStep[],
+  name: string,
+  status: string,
+  at: string,
+): readonly WorkflowStep[] =>
+  steps.map((step) =>
+    step.name === name
+      ? {
+          ...step,
+          status,
+          startedAt: status === "running" ? at : step.startedAt,
+          finishedAt: status === "completed" || status === "failed" ? at : step.finishedAt,
+        }
+      : step,
+  );
 
 type WorkflowExecutionWithParsedSteps = Omit<WorkflowExecution, "steps"> & {
   readonly steps: readonly WorkflowStep[] | null;
@@ -40,6 +81,34 @@ export type SchedulePage = {
   readonly nextCursor: string | null;
 };
 
+export type StartWorkflowInput = {
+  readonly id: string;
+  readonly trigger: string;
+  readonly idempotencyKey: string;
+  readonly startedAt: Date;
+};
+export type UpdateWorkflowInput = {
+  readonly id: string;
+  readonly status: string;
+  readonly steps: readonly WorkflowStep[];
+  readonly finishedAt?: Date;
+  readonly error?: string | null;
+  readonly failedStep?: string | null;
+};
+export type StartActivityInput = {
+  readonly id: string;
+  readonly executionId: string;
+  readonly activityName: string;
+  readonly attempt: number;
+  readonly startedAt: Date;
+};
+export type FinishActivityInput = {
+  readonly id: string;
+  readonly status: string;
+  readonly finishedAt: Date;
+  readonly error?: string | null;
+};
+
 /** Persistence boundary for the application-owned workflow projection. */
 interface WorkflowProjectionRepoContract {
   readonly list: (
@@ -51,6 +120,23 @@ interface WorkflowProjectionRepoContract {
     limit: number,
     cursor: string | undefined,
   ) => Effect.Effect<SchedulePage, EffectDrizzleQueryError>;
+  readonly startWorkflow: (
+    input: StartWorkflowInput,
+  ) => Effect.Effect<void, EffectDrizzleQueryError>;
+  readonly updateWorkflow: (
+    input: UpdateWorkflowInput,
+  ) => Effect.Effect<void, EffectDrizzleQueryError>;
+  readonly startActivity: (
+    input: StartActivityInput,
+  ) => Effect.Effect<void, EffectDrizzleQueryError>;
+  readonly finishActivity: (
+    input: FinishActivityInput,
+  ) => Effect.Effect<void, EffectDrizzleQueryError>;
+  readonly ensureSchedule: Effect.Effect<void, EffectDrizzleQueryError>;
+  readonly recordOccurrence: (
+    scheduledAt: Date,
+    executionId: string,
+  ) => Effect.Effect<void, EffectDrizzleQueryError>;
 }
 
 function parseSteps(stepsJson: string | null): readonly WorkflowStep[] | null {
@@ -123,6 +209,16 @@ export class WorkflowProjectionRepo extends Context.Service<
         })(),
       schedules: (limit: number, cursor: string | undefined) =>
         Effect.fn("WorkflowProjectionRepo.schedules")(function* () {
+          yield* db
+            .insert(workflowCronSchedules)
+            .values({
+              id: "cadastre-sync-daily",
+              workflowName: "CadastreSyncWorkflow",
+              expression: "0 0 2 * * *",
+              timezone: "Australia/Sydney",
+              enabled: "true",
+            })
+            .onConflictDoNothing();
           // Fetch one extra to determine if there's a next page
           const fetchLimit = limit + 1;
 
@@ -166,6 +262,77 @@ export class WorkflowProjectionRepo extends Context.Service<
             nextCursor,
           };
         })(),
+      startWorkflow: (input: StartWorkflowInput) =>
+        db
+          .insert(workflowExecutions)
+          .values({
+            id: input.id,
+            workflowName: "CadastreSyncWorkflow",
+            status: "running",
+            trigger: input.trigger,
+            idempotencyKey: input.idempotencyKey,
+            startedAt: input.startedAt,
+            steps: JSON.stringify(initialSteps(input.startedAt.toISOString())),
+          })
+          .onConflictDoNothing(),
+      updateWorkflow: (input: UpdateWorkflowInput) =>
+        db
+          .update(workflowExecutions)
+          .set({
+            status: input.status,
+            steps: JSON.stringify(input.steps),
+            ...(input.finishedAt ? { finishedAt: input.finishedAt } : {}),
+            ...(input.error !== undefined ? { error: input.error } : {}),
+            ...(input.failedStep !== undefined ? { failedStep: input.failedStep } : {}),
+          })
+          .where(
+            and(
+              eq(workflowExecutions.id, input.id),
+              notInArray(workflowExecutions.status, ["succeeded", "failed"]),
+            ),
+          ),
+      startActivity: (input: StartActivityInput) =>
+        db
+          .insert(workflowActivityAttempts)
+          .values({
+            id: input.id,
+            executionId: input.executionId,
+            activityName: input.activityName,
+            attempt: input.attempt,
+            status: "running",
+            startedAt: input.startedAt,
+          })
+          .onConflictDoNothing(),
+      finishActivity: (input: FinishActivityInput) =>
+        db
+          .update(workflowActivityAttempts)
+          .set({
+            status: input.status,
+            finishedAt: input.finishedAt,
+            ...(input.error !== undefined ? { error: input.error } : {}),
+          })
+          .where(eq(workflowActivityAttempts.id, input.id)),
+      ensureSchedule: db
+        .insert(workflowCronSchedules)
+        .values({
+          id: "cadastre-sync-daily",
+          workflowName: "CadastreSyncWorkflow",
+          expression: "0 0 2 * * *",
+          timezone: "Australia/Sydney",
+          enabled: "true",
+        })
+        .onConflictDoNothing(),
+      recordOccurrence: (scheduledAt: Date, executionId: string) =>
+        db
+          .insert(workflowCronOccurrences)
+          .values({
+            id: `occurrence-${executionId}`,
+            scheduleId: "cadastre-sync-daily",
+            scheduledAt,
+            status: "triggered",
+            executionId,
+          })
+          .onConflictDoNothing(),
     };
   })(),
 }) {}

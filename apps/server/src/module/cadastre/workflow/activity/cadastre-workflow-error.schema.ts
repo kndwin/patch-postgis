@@ -29,6 +29,14 @@ export class CadastreDownloadLinkError extends Schema.TaggedErrorClass<CadastreD
   "CadastreDownloadLinkError",
   { message: Schema.String },
 ) {}
+export class CadastreWorkflowPostgisError extends Schema.TaggedErrorClass<CadastreWorkflowPostgisError>()(
+  "CadastreWorkflowPostgisError",
+  { message: Schema.String },
+) {}
+export class CadastreWorkflowPmtilesError extends Schema.TaggedErrorClass<CadastreWorkflowPmtilesError>()(
+  "CadastreWorkflowPmtilesError",
+  { message: Schema.String },
+) {}
 
 export const CadastreActivityErrorSchema = Schema.Union([
   CadastreWorkflowConfigError,
@@ -37,4 +45,6 @@ export const CadastreActivityErrorSchema = Schema.Union([
   CadastreWorkflowProviderError,
   CadastreWorkflowNotImplemented,
   CadastreDownloadLinkError,
+  CadastreWorkflowPostgisError,
+  CadastreWorkflowPmtilesError,
 ]);

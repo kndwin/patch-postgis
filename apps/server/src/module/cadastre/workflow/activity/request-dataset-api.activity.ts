@@ -1,6 +1,7 @@
 import { Config, DateTime, Effect, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http";
 import { Activity } from "effect/unstable/workflow";
+import { projectActivity } from "../workflow-projection.activity";
 import {
   CadastreActivityErrorSchema,
   ProviderResponseSchema,
@@ -87,10 +88,14 @@ export const RequestDatasetApiEffect = Effect.fn("RequestDatasetApi")(function* 
     headers: { accept: "application/json" },
   }).pipe(HttpClientRequest.bodyText(JSON.stringify(payload), "text/plain"));
   const Response = yield* HttpClient.execute(Request).pipe(
-    Effect.mapError((error) => new CadastreWorkflowHttpError({ message: String(error) })),
+    Effect.mapError(
+      () => new CadastreWorkflowHttpError({ message: "Dataset export request failed" }),
+    ),
   );
   const Body = yield* Response.json.pipe(
-    Effect.mapError((error) => new CadastreWorkflowJsonError({ message: String(error) })),
+    Effect.mapError(
+      () => new CadastreWorkflowJsonError({ message: "Dataset export response was invalid" }),
+    ),
   );
   if (Response.status < 200 || Response.status >= 300) {
     yield* Effect.logWarning(`cadastre dataset export failed (status ${Response.status})`);
@@ -123,12 +128,15 @@ export const RequestDatasetApiActivity = Activity.make({
   name: "CadastreSyncWorkflow/request-dataset-api",
   success: DatasetExportMetadataSchema,
   error: CadastreActivityErrorSchema,
-  execute: RequestDatasetApiEffect.pipe(
-    Effect.provide(FetchHttpClient.layer),
-    Effect.mapError((error) =>
-      error._tag === "ConfigError"
-        ? new CadastreWorkflowConfigError({ message: String(error) })
-        : error,
+  execute: projectActivity(
+    "request-dataset-api",
+    RequestDatasetApiEffect.pipe(
+      Effect.provide(FetchHttpClient.layer),
+      Effect.mapError((error) =>
+        error._tag === "ConfigError"
+          ? new CadastreWorkflowConfigError({ message: "Dataset export configuration is invalid" })
+          : error,
+      ),
     ),
   ),
 });

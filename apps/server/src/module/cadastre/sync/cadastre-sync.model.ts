@@ -8,7 +8,7 @@ export const cadastreSnapshots = pgTable(
     lotCount: integer("lot_count").notNull(),
     importedAt: timestamp("imported_at", { withTimezone: true }).notNull(),
     pmtilesStatus: text("pmtiles_status").notNull(),
-    pmtilesUrl: text("pmtiles_url"),
+    pmtilesObjectKey: text("pmtiles_object_key"),
   },
   (table) => [index("cadastre_snapshots_imported_at_idx").on(table.importedAt)],
 );

@@ -1,64 +1,54 @@
 # Cadastre sync workflow
 
-The workflow boundary is `CadastreSyncWorkflow` and its stable activity names are
-defined in `apps/server/src/module/cadastre/workflow/cadastre-workflow.workflow.ts`.
-The protected manual trigger is `POST /workflows/cadastre-sync` with a Bearer
-token in `CADASTRE_WORKFLOW_TRIGGER_TOKEN` and body `{"idempotencyKey":"manual-example"}`
-(the key is optional). Email download-link extraction is implemented; the next
-blocker is the `download-gdb` activity, followed by the GDAL/PostGIS and publish steps.
+The workflow boundary is `CadastreSyncWorkflow`; its stable activity names are defined in
+`apps/server/src/module/cadastre/workflow/cadastre-workflow.workflow.ts`. The protected manual
+trigger is `POST /workflows/cadastre-sync` with a Bearer token in
+`CADASTRE_WORKFLOW_TRIGGER_TOKEN` and an optional `idempotencyKey`.
+
+Email download-link extraction, source artifact handoff, PostGIS import, validation, atomic
+promotion, PMTiles build, multipart upload, final HEAD/public range and metadata verification, and
+DB publication are implemented. Remaining work is production deploy/trigger validation, not build
+scaffolds.
+
+Activities exchange R2 keys and metadata only. Local filesystem paths stay activity-local and are
+never workflow values. The private source artifact lifecycle is 14 days; incomplete tile multipart
+uploads are aborted after 1 day. Required production settings are
+`CADASTRE_ARTIFACT_URL`/`CADASTRE_ARTIFACT_TOKEN` and
+`CADASTRE_TILE_URL`/`CADASTRE_TILE_PUBLISH_TOKEN`.
+
+Production mounts `CADASTRE_WORK_DIR=/data/cadastre` on a 50 GiB Railway work volume for
+activity-local ZIP, MBTiles, and PMTiles files. PostGIS uses a 40 GiB data volume for the full
+parcel table, spatial index, and transactional replacement.
+
+The download activity hashes `idempotencyKey + NUL + downloadUrl` with SHA-256 and sends the provider
+URL to `CADASTRE_ARTIFACT_URL/source`. The private artifact worker streams
+`runs/<sha256>/source/export.zip`; import verifies size, ETag, archive integrity, FileGDB layout,
+and the `Lot` layer. The PMTiles activity runs `pmtiles convert`, `pmtiles verify`,
+`show --header-json`, and `show --metadata`, then performs a multipart R2 upload. Completion
+metadata and final HEAD are checked, and the verification activity checks public range and metadata
+responses before recording the published object key in the database. The status API continues to
+serve the newest published snapshot while a replacement remains in the `building` state.
+
+## PMTiles implementation evidence
+
+The completed full-scale fixture contained 3,353,211 features and produced approximately 11 GiB of
+MBTiles, then a 3,951,148,805-byte PMTiles v3 archive. Verify passed; the `lots` layer contains
+`id` and `lot_number` fields at z14–18. It addressed 60,214,271 tiles and contained 21,656,041
+tile entries. Upload completed as a successful 59-part R2 multipart upload. Public range and decoded
+MVT tile checks and metadata verification passed. A later redundant run was stopped incomplete and
+was not used as evidence. The exact production PostGIS → GeoJSONSeq → tippecanoe → PMTiles command
+shape was also exercised against 1,000 real parcels and passed the same layer/field/zoom validators.
+
+The daily schedule is `0 0 2 * * *` (seconds included), in `Australia/Sydney`. `workflow_*` tables
+are an application-owned projection, separate from Effect cluster tables; projection writes are handled
+by the workflow runtime. The HTTP projection is `/workflows/:id`, `/workflows`, and
+`/schedules`.
+
+This is intentionally a single-process deployment: do not run multiple Railway replicas with this
+mode. `DATABASE_URL` must point at PostgreSQL and `PORT` controls HTTP.
 
 ```sh
-curl -X POST "http://localhost:${PORT:-3000}/workflows/cadastre-sync" \
-  -H "authorization: Bearer <CADASTRE_WORKFLOW_TRIGGER_TOKEN>" \
-  -H 'content-type: application/json' -d '{}'
-```
-
-Export requests use `CADASTRE_EXPORT_EMAIL`, defaulting to
-`cadastre-export-staging@decoco.work`. The wait step matches that recipient and
-only accepts ingestion rows received after the request started. It performs 13
-durable lookups, 30 minutes apart, covering up to six hours. The server
-bootstraps an Effect workflow runtime, so this polling is persisted in
-PostgreSQL and survives process restarts.
-
-The daily schedule is `0 0 2 * * *` (seconds included), in
-`Australia/Sydney`. `workflow_*` tables are an application-owned projection;
-they are not Effect cluster tables and do not make the old `sync_runs` table
-authoritative. The read-only HTTP projection is `/workflows/:id`, `/workflows`,
-and `/schedules`, with a 25 default and 100 maximum limit. Cursor encoding and
-SQL projection writes are the next incremental step; the current empty
-projection is truthful and does not report successful production work.
-
-The runtime uses Effect beta.102's `SingleRunner.layer({ runnerStorage: "sql" })`,
-`ClusterWorkflowEngine.layer`, and Bun crypto. `DATABASE_URL` must point at
-PostgreSQL (the local fallback is for development), and `PORT` controls HTTP.
-SingleRunner's SQL message and runner storage install their own cluster tables
-and migrations at startup. These are separate from the application-owned
-`workflow_*` projection tables.
-
-This is intentionally a single-process deployment: runner communication and
-health checks are local no-ops. Do not run multiple Railway replicas with this
-mode. Multi-replica support would require a socket/cluster transport and is a
-separate deployment mode, not an implicit property of PostgreSQL storage.
-
-The daily cron is registered at startup and runs at `02:00` Australia/Sydney.
-The workflow is registered in the same runtime, and the manual HTTP trigger
-executes it through the durable engine. Verify startup and persistence with:
-
-```sh
-pnpm --filter @patch/server start
-psql "$DATABASE_URL" -c '\\dt *workflow*' -c '\\dt *cluster*'
-curl http://localhost:${PORT:-3000}/workflows
-```
-
-## Validation
-
-```sh
-pnpm --filter @patch/server typecheck
-pnpm --filter @patch/browser typecheck
-pnpm --filter @patch/browser exec vite build
-git diff --check
 SAO_ALLOW_TESTS=1 pnpm --filter @patch/server test
+pnpm --filter @patch/server typecheck
+git diff --check
 ```
-
-Set `VITE_MOCK_SYNC=true` only for browser fixture mode. Production browser mode
-calls the API and displays an unavailable state on errors.

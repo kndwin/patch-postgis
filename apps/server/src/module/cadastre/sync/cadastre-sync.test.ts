@@ -2,7 +2,42 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildOgr2OgrArgs, parseDatabaseUrl, resolveSourcePath } from "./cadastre-sync.service";
+import {
+  buildOgr2OgrArgs,
+  databaseToolEnvironment,
+  parseDatabaseUrl,
+  resolveSourcePath,
+  stagingIdentifiers,
+} from "./cadastre-sync.service";
+import { fileGdbRoot } from "../workflow/activity/import-postgis.activity";
+
+describe("stagingIdentifiers", () => {
+  test("are deterministic, distinct, valid, and fit PostgreSQL's identifier limit", () => {
+    const a = stagingIdentifiers("a".repeat(64));
+    const b = stagingIdentifiers("b".repeat(64));
+    expect(a).toEqual(stagingIdentifiers("a".repeat(64)));
+    expect(a.table).not.toBe(b.table);
+    expect(a.index).not.toBe(b.index);
+    for (const identifier of [a.table, a.index, b.table, b.index]) {
+      expect(identifier.length).toBeLessThanOrEqual(63);
+      expect(identifier).toMatch(/^[a-z_][a-z0-9_]*$/);
+    }
+  });
+});
+
+describe("fileGdbRoot", () => {
+  test("accepts the FileGDB archive layout", () => {
+    expect(
+      fileGdbRoot(["Lot_EPSG7844.gdb/a00000001.gdbtable", "Lot_EPSG7844.gdb/a00000001.gdbtablx"]),
+    ).toBe("Lot_EPSG7844.gdb");
+  });
+  test("rejects unsafe, duplicate, empty, and non-GDB archives", () => {
+    expect(() => fileGdbRoot([])).toThrow();
+    expect(() => fileGdbRoot(["data.csv"])).toThrow();
+    expect(() => fileGdbRoot(["a.gdb/x", "a.gdb/x"])).toThrow();
+    expect(() => fileGdbRoot(["../a.gdb/x"])).toThrow();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // parseDatabaseUrl
@@ -10,14 +45,15 @@ import { buildOgr2OgrArgs, parseDatabaseUrl, resolveSourcePath } from "./cadastr
 
 describe("parseDatabaseUrl", () => {
   test("extracts host, port, dbname, user, password from a standard URL", () => {
-    const { pgConnString, redacted } = parseDatabaseUrl(
+    const { safePgConnString, password, redacted } = parseDatabaseUrl(
       "postgres://alice:secret@db.example.com:5433/mydb",
     );
-    expect(pgConnString).toContain("host=db.example.com");
-    expect(pgConnString).toContain("port=5433");
-    expect(pgConnString).toContain("dbname=mydb");
-    expect(pgConnString).toContain("user=alice");
-    expect(pgConnString).toContain("password=secret");
+    expect(safePgConnString).toContain("host=db.example.com");
+    expect(safePgConnString).toContain("port=5433");
+    expect(safePgConnString).toContain("dbname=mydb");
+    expect(safePgConnString).toContain("user=alice");
+    expect(safePgConnString).not.toContain("secret");
+    expect(password).toBe("secret");
     // redacted must never leak the password
     expect(redacted).not.toContain("secret");
     expect(redacted).toContain("password=***");
@@ -25,21 +61,24 @@ describe("parseDatabaseUrl", () => {
   });
 
   test("handles default port 5432 when none specified", () => {
-    const { pgConnString } = parseDatabaseUrl("postgres://u:p@localhost/mydb");
-    expect(pgConnString).toContain("port=5432");
+    const { safePgConnString } = parseDatabaseUrl("postgres://u:p@localhost/mydb");
+    expect(safePgConnString).toContain("port=5432");
   });
 
   test("handles empty password", () => {
-    const { pgConnString, redacted } = parseDatabaseUrl("postgres://u:@localhost/mydb");
+    const { safePgConnString, redacted } = parseDatabaseUrl("postgres://u:@localhost/mydb");
     // password= is omitted when empty
-    expect(pgConnString).not.toContain("password=");
+    expect(safePgConnString).not.toContain("password=");
     expect(redacted).not.toContain("password=");
   });
 
   test("URL-decodes percent-encoded user and password", () => {
-    const { pgConnString } = parseDatabaseUrl("postgres://us%40r:p%3Ass@localhost/db");
-    expect(pgConnString).toContain("user=us@r");
-    expect(pgConnString).toContain("password=p:ss");
+    const { safePgConnString, password } = parseDatabaseUrl(
+      "postgres://us%40r:p%3Ass@localhost/db",
+    );
+    expect(safePgConnString).toContain("user=us@r");
+    expect(safePgConnString).not.toContain("p:ss");
+    expect(password).toBe("p:ss");
   });
 
   test("rejects a non-postgres URL", () => {
@@ -49,17 +88,17 @@ describe("parseDatabaseUrl", () => {
   });
 
   test("handles postgresql:// scheme", () => {
-    const { pgConnString } = parseDatabaseUrl("postgresql://u:p@localhost/db");
-    expect(pgConnString).toContain("host=localhost");
-    expect(pgConnString).toContain("dbname=db");
+    const { safePgConnString } = parseDatabaseUrl("postgresql://u:p@localhost/db");
+    expect(safePgConnString).toContain("host=localhost");
+    expect(safePgConnString).toContain("dbname=db");
   });
 
   test("single-quotes password containing spaces so ogr2ogr PG: parser handles it", () => {
-    const { pgConnString, redacted } = parseDatabaseUrl(
+    const { safePgConnString, redacted } = parseDatabaseUrl(
       "postgres://alice:p%20a%20s%20s@localhost/db",
     );
-    // The real connection string must quote the value so the space is preserved.
-    expect(pgConnString).toContain("password='p a s s'");
+    // The safe connection string must never contain the password.
+    expect(safePgConnString).not.toContain("p a s s");
     // Redacted version must not leak the password, quoted or unquoted.
     expect(redacted).not.toContain("p a s s");
     expect(redacted).not.toContain("p%20a");
@@ -67,19 +106,28 @@ describe("parseDatabaseUrl", () => {
   });
 
   test("escapes single-quotes inside password values", () => {
-    const { pgConnString } = parseDatabaseUrl("postgres://u:p%27word@localhost/db");
+    const { safePgConnString } = parseDatabaseUrl("postgres://u:p%27word@localhost/db");
     // p'word → inside a quoted PG value must become p\\'word
-    expect(pgConnString).toContain("password='p\\'word'");
+    expect(safePgConnString).not.toContain("p\\'word");
+  });
+
+  test("keeps backslash passwords out of the safe connection string", () => {
+    const { safePgConnString, password, redacted } = parseDatabaseUrl(
+      "postgres://u:p%5Cword@localhost/db",
+    );
+    expect(password).toBe("p\\word");
+    expect(safePgConnString).not.toContain("p\\word");
+    expect(redacted).not.toContain("p\\word");
   });
 
   test("single-quotes username containing spaces", () => {
-    const { pgConnString } = parseDatabaseUrl("postgres://my%20user:p@localhost/db");
-    expect(pgConnString).toContain("user='my user'");
+    const { safePgConnString } = parseDatabaseUrl("postgres://my%20user:p@localhost/db");
+    expect(safePgConnString).toContain("user='my user'");
   });
 
   test("single-quotes dbname containing spaces", () => {
-    const { pgConnString } = parseDatabaseUrl("postgres://u:p@localhost/my%20db");
-    expect(pgConnString).toContain("dbname='my db'");
+    const { safePgConnString } = parseDatabaseUrl("postgres://u:p@localhost/my%20db");
+    expect(safePgConnString).toContain("dbname='my db'");
   });
 
   test("redacted version never contains the raw password even when quoted", () => {
@@ -87,6 +135,17 @@ describe("parseDatabaseUrl", () => {
     expect(redacted).not.toContain("'p a s s'");
     expect(redacted).not.toContain("p a s s");
     expect(redacted).toContain("password=***");
+  });
+});
+
+describe("databaseToolEnvironment", () => {
+  test("passes PGPASSWORD without inheriting DATABASE_URL", () => {
+    expect(
+      databaseToolEnvironment("secret", {
+        PATH: "/usr/bin",
+        DATABASE_URL: "postgres://user:secret@db/database",
+      }),
+    ).toEqual({ PATH: "/usr/bin", PGPASSWORD: "secret" });
   });
 });
 
@@ -98,7 +157,8 @@ describe("buildOgr2OgrArgs", () => {
   test("builds an argument array with no shell metacharacters", () => {
     const args = buildOgr2OgrArgs(
       "/tmp/mydata.gdb",
-      "host=localhost port=5432 dbname=mydb user=u password=p",
+      "host=localhost port=5432 dbname=mydb user=u",
+      "cadastre_lots_staging_test",
     );
 
     // Must be a plain array – no shell-string concatenation.
@@ -115,39 +175,63 @@ describe("buildOgr2OgrArgs", () => {
   });
 
   test("includes the PG connection string", () => {
-    const args = buildOgr2OgrArgs("/tmp/x.gdb", "host=h port=5432 dbname=d user=u password=p");
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
     const pgArg = args.find((a) => a.startsWith("PG:"));
-    expect(pgArg).toBe("PG:host=h port=5432 dbname=d user=u password=p");
+    expect(pgArg).toBe("PG:host=h port=5432 dbname=d user=u");
   });
 
   test("sets staging table name", () => {
-    const args = buildOgr2OgrArgs("/tmp/x.gdb", "host=h port=5432 dbname=d user=u password=p");
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
     const nlnIdx = args.indexOf("-nln");
     expect(nlnIdx).toBeGreaterThan(-1);
-    expect(args[nlnIdx + 1]).toBe("cadastre_lots_staging");
+    expect(args[nlnIdx + 1]).toBe("cadastre_lots_staging_test");
   });
 
   test("includes -append flag so ogr2ogr never auto-creates the table", () => {
-    const args = buildOgr2OgrArgs("/tmp/x.gdb", "host=h port=5432 dbname=d user=u password=p");
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
     expect(args).toContain("-append");
   });
 
   test("sets source CRS to EPSG:7844 (GDA2020)", () => {
-    const args = buildOgr2OgrArgs("/tmp/x.gdb", "host=h port=5432 dbname=d user=u password=p");
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
     const srsIdx = args.indexOf("-s_srs");
     expect(srsIdx).toBeGreaterThan(-1);
     expect(args[srsIdx + 1]).toBe("EPSG:7844");
   });
 
   test("sets target CRS to EPSG:4326", () => {
-    const args = buildOgr2OgrArgs("/tmp/x.gdb", "host=h port=5432 dbname=d user=u password=p");
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
     const tIdx = args.indexOf("-t_srs");
     expect(tIdx).toBeGreaterThan(-1);
     expect(args[tIdx + 1]).toBe("EPSG:4326");
   });
 
   test("promotes geometries to multi-type and sets geometry column name", () => {
-    const args = buildOgr2OgrArgs("/tmp/x.gdb", "host=h port=5432 dbname=d user=u password=p");
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
     expect(args).toContain("-nlt");
     expect(args).toContain("PROMOTE_TO_MULTI");
     expect(args).toContain("-lco");
@@ -155,7 +239,11 @@ describe("buildOgr2OgrArgs", () => {
   });
 
   test("selects cadid→id, lotidstring→lot_number, and SHAPE→geometry from Lot layer", () => {
-    const args = buildOgr2OgrArgs("/tmp/x.gdb", "host=h port=5432 dbname=d user=u password=p");
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
     const sqlIdx = args.indexOf("-sql");
     expect(sqlIdx).toBeGreaterThan(-1);
     expect(args[sqlIdx + 1]).toBe(
