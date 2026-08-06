@@ -1,14 +1,54 @@
 import { describe, expect, test } from "bun:test";
 import { Effect } from "effect";
 import {
+  isValidChecksum,
+  isValidPartSize,
+  parseMultipartParts,
   isSourceObjectKey,
   isTrustedCadastreDownloadUrl,
+  MAX_PART_SIZE,
   sourceHeaders,
   sourceObjectKeyFromRequest,
 } from "./artifact.boundary";
 import { sourceObjectKey } from "../../../module/cadastre/workflow/activity/download-gdb.activity";
 
 describe("cadastre artifact boundary", () => {
+  test("accepts only contiguous multipart parts with non-empty etags", () => {
+    expect(
+      parseMultipartParts([
+        { partNumber: 2, etag: "b" },
+        { partNumber: 1, etag: "a" },
+      ]),
+    ).toEqual([
+      { partNumber: 1, etag: "a" },
+      { partNumber: 2, etag: "b" },
+    ]);
+    for (const parts of [
+      [
+        { partNumber: 1, etag: "a" },
+        { partNumber: 3, etag: "c" },
+      ],
+      [
+        { partNumber: 1, etag: "a" },
+        { partNumber: 1, etag: "b" },
+      ],
+      [{ partNumber: 0, etag: "a" }],
+      [],
+      [{ partNumber: 1, etag: "" }],
+      [{ partNumber: 1, etag: 1 }],
+    ])
+      expect(parseMultipartParts(parts)).toBeNull();
+  });
+
+  test("validates multipart sizes and metadata checksums", () => {
+    expect(isValidPartSize(1)).toBe(true);
+    expect(isValidPartSize(MAX_PART_SIZE)).toBe(true);
+    expect(isValidPartSize(0)).toBe(false);
+    expect(isValidPartSize(MAX_PART_SIZE + 1)).toBe(false);
+    expect(isValidChecksum("a".repeat(64))).toBe(true);
+    expect(isValidChecksum("a".repeat(63))).toBe(false);
+    expect(isValidChecksum("g".repeat(64))).toBe(false);
+  });
   test("accepts only the provider export trust boundary", () => {
     expect(
       isTrustedCadastreDownloadUrl("https://portal.spatial.nsw.gov.au/exports/file.zip?sig=x"),

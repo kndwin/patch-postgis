@@ -20,9 +20,11 @@ Production mounts `CADASTRE_WORK_DIR=/data/cadastre` on a 50 GiB Railway work vo
 activity-local ZIP, MBTiles, and PMTiles files. PostGIS uses a 40 GiB data volume for the full
 parcel table, spatial index, and transactional replacement.
 
-The download activity hashes `idempotencyKey + NUL + downloadUrl` with SHA-256 and sends the provider
-URL to `CADASTRE_ARTIFACT_URL/source`. The private artifact worker streams
-`runs/<sha256>/source/export.zip`; import verifies size, ETag, archive integrity, FileGDB layout,
+The download activity hashes `idempotencyKey + NUL + downloadUrl` with SHA-256, downloads the trusted
+NSW URL into its Railway-local work directory, and publishes 64 MiB multipart parts to the protected
+artifact worker. The worker accepts only validated `runs/<sha256>/source/export.zip` keys and never
+fetches provider URLs. Source uploads are capped at 2 GiB, include a SHA-256 custom metadata value,
+and are idempotent through authenticated final HEAD. Import verifies size, ETag, archive integrity, FileGDB layout,
 and the `Lot` layer. The PMTiles activity runs `pmtiles convert`, `pmtiles verify`,
 `show --header-json`, and `show --metadata`, then performs a multipart R2 upload. Completion
 metadata and final HEAD are checked, and the verification activity checks public range and metadata
