@@ -1,4 +1,4 @@
-import { defineRailway, github, image, project, service, volume } from "railway/iac";
+import { defineRailway, github, image, preserve, project, service, volume } from "railway/iac";
 
 export default defineRailway((ctx) => {
   const singaporeRegion = "asia-southeast1-eqsg3a";
@@ -47,12 +47,14 @@ export default defineRailway((ctx) => {
     },
     env: {
       DATABASE_URL: postgis.env.DATABASE_URL,
+      CADASTRE_EMAIL_INGESTION_TOKEN: preserve(),
       CADASTRE_EXPORT_EMAIL: "cadastre-export@decoco.work",
       CADASTRE_ARTIFACT_URL: ctx.shared.CADASTRE_ARTIFACT_URL,
       CADASTRE_ARTIFACT_TOKEN: ctx.shared.CADASTRE_ARTIFACT_TOKEN,
       CADASTRE_WORK_DIR: "/data/cadastre",
       CADASTRE_TILE_URL: ctx.shared.CADASTRE_TILE_URL,
       CADASTRE_TILE_PUBLISH_TOKEN: ctx.shared.CADASTRE_TILE_PUBLISH_TOKEN,
+      CADASTRE_WORKFLOW_TRIGGER_TOKEN: preserve(),
       // Keep the app listener aligned with the Railway domain target port.
       PORT: "3000",
     },

@@ -52,3 +52,11 @@ SAO_ALLOW_TESTS=1 pnpm --filter @patch/server test
 pnpm --filter @patch/server typecheck
 git diff --check
 ```
+
+## Export request delivery
+
+The request-dataset activity claims a PostgreSQL row keyed by the workflow execution ID
+before sending the NSW export POST. Only the claim owner sends; replays reconstruct the
+activity result from that row. A claim is never deleted after a network or provider error:
+the outcome may be ambiguous, so the failed workflow is not automatically retried into a
+second export request. A new workflow idempotency key is required to make a new request.

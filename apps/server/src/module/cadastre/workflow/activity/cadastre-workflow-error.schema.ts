@@ -10,6 +10,11 @@ export class CadastreWorkflowHttpError extends Schema.TaggedErrorClass<CadastreW
   { message: Schema.String },
 ) {}
 
+export class CadastreWorkflowDatabaseError extends Schema.TaggedErrorClass<CadastreWorkflowDatabaseError>()(
+  "CadastreWorkflowDatabaseError",
+  { message: Schema.String },
+) {}
+
 export class CadastreWorkflowJsonError extends Schema.TaggedErrorClass<CadastreWorkflowJsonError>()(
   "CadastreWorkflowJsonError",
   { message: Schema.String },
@@ -41,6 +46,7 @@ export class CadastreWorkflowPmtilesError extends Schema.TaggedErrorClass<Cadast
 export const CadastreActivityErrorSchema = Schema.Union([
   CadastreWorkflowConfigError,
   CadastreWorkflowHttpError,
+  CadastreWorkflowDatabaseError,
   CadastreWorkflowJsonError,
   CadastreWorkflowProviderError,
   CadastreWorkflowNotImplemented,

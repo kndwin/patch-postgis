@@ -1,13 +1,16 @@
 import { Config, DateTime, Effect, Schema } from "effect";
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http";
 import { Activity } from "effect/unstable/workflow";
+import { WorkflowEngine } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { CadastreExportRequestRepo, exportRequestShouldSend } from "./request-dataset-api.repo";
 import {
   CadastreActivityErrorSchema,
   ProviderResponseSchema,
 } from "./request-dataset-api.activity.schema";
 import {
   CadastreWorkflowConfigError,
+  CadastreWorkflowDatabaseError,
   CadastreWorkflowHttpError,
   CadastreWorkflowJsonError,
   CadastreWorkflowProviderError,
@@ -30,17 +33,11 @@ const DefaultSelectionGeometry = JSON.stringify({
 });
 
 export interface DatasetExportMetadata {
-  readonly status: number;
-  readonly providerRequestId?: string;
-  readonly response: unknown;
   readonly requestedAt: string;
   readonly emailAddress: string;
 }
 
 const DatasetExportMetadataSchema = Schema.Struct({
-  status: Schema.Number,
-  providerRequestId: Schema.optional(Schema.String),
-  response: Schema.Unknown,
   requestedAt: Schema.String,
   emailAddress: Schema.String,
 });
@@ -62,6 +59,21 @@ export const RequestDatasetApiEffect = Effect.fn("RequestDatasetApi")(function* 
     Config.withDefault("cadastre-export-staging@decoco.work"),
   );
   const requestedAt = yield* DateTime.now;
+  const instance = yield* WorkflowEngine.WorkflowInstance;
+  const requests = yield* CadastreExportRequestRepo;
+  const claim = yield* requests
+    .claim(instance.executionId, DateTime.toDate(requestedAt), emailAddress)
+    .pipe(
+      Effect.mapError(
+        () => new CadastreWorkflowDatabaseError({ message: "Dataset export request guard failed" }),
+      ),
+    );
+  if (!exportRequestShouldSend(claim)) {
+    return {
+      requestedAt: claim.request.requestedAt.toISOString(),
+      emailAddress: claim.request.emailAddress,
+    } satisfies DatasetExportMetadata;
+  }
 
   const payload = {
     layers: "Lot",
@@ -92,32 +104,36 @@ export const RequestDatasetApiEffect = Effect.fn("RequestDatasetApi")(function* 
       () => new CadastreWorkflowHttpError({ message: "Dataset export request failed" }),
     ),
   );
-  const Body = yield* Response.json.pipe(
-    Effect.mapError(
-      () => new CadastreWorkflowJsonError({ message: "Dataset export response was invalid" }),
-    ),
-  );
   if (Response.status < 200 || Response.status >= 300) {
     yield* Effect.logWarning(`cadastre dataset export failed (status ${Response.status})`);
     return yield* Effect.fail(
       new CadastreWorkflowProviderError({
         message: `Cadastre export provider returned HTTP ${Response.status}`,
         status: Response.status,
-        response: Body,
+        response: null,
       }),
     );
   }
 
+  const Body = yield* Response.json.pipe(
+    Effect.mapError(
+      () => new CadastreWorkflowJsonError({ message: "Dataset export response was invalid" }),
+    ),
+  );
   const ProviderResponse = Schema.is(ProviderResponseSchema)(Body) ? Body : undefined;
   const ProviderRequestId =
     ProviderResponse?.requestId ?? ProviderResponse?.jobId ?? ProviderResponse?.id;
+  yield* requests
+    .markQueued(instance.executionId, ProviderRequestId)
+    .pipe(
+      Effect.mapError(
+        () => new CadastreWorkflowDatabaseError({ message: "Dataset export request guard failed" }),
+      ),
+    );
   yield* Effect.logInfo(
     `cadastre dataset export queued (status ${Response.status}, provider id ${ProviderRequestId === undefined ? "none" : "present"})`,
   );
   return {
-    status: Response.status,
-    providerRequestId: ProviderRequestId,
-    response: Body,
     requestedAt: DateTime.formatIso(requestedAt),
     emailAddress,
   } satisfies DatasetExportMetadata;

@@ -51,6 +51,7 @@ export default Alchemy.Stack(
     });
 
     const site = yield* Cloudflare.Website.StaticSite("Site", {
+      name: "patch-postgis",
       cwd: "apps/browser",
       command: "sh build-site.sh",
       outdir: "dist",
