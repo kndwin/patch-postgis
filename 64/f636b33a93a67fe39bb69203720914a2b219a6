@@ -1,0 +1,16 @@
+apps/server/src/module/cadastre/workflow/cadastre-email-ingestion.repo.ts
+  h_ba3efde196eb39 18-22,24,27,30-36,47-48
+apps/server/src/module/cadastre/workflow/cadastre-workflow.runtime.live.ts
+  h_ba3efde196eb39 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "64f636b33a93a67fe39bb69203720914a2b219a6",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
