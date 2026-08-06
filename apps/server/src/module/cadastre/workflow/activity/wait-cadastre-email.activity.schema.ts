@@ -13,6 +13,7 @@ export class CadastreEmailLookupError extends Schema.TaggedErrorClass<CadastreEm
 export const WaitCadastreEmailSuccessSchema = Schema.Struct({
   messageId: Schema.String,
   receivedAt: Schema.String,
+  parsedEmail: Schema.Unknown,
 });
 
 export const WaitCadastreEmailErrorSchema = Schema.Union([CadastreEmailTimeoutError]);

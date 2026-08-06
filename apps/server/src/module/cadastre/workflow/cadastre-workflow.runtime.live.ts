@@ -13,5 +13,5 @@ const SingleRunnerLive = SingleRunner.layer({ runnerStorage: "sql" }).pipe(
 const WorkflowEngineLive = ClusterWorkflowEngine.layer.pipe(Layer.provideMerge(SingleRunnerLive));
 
 export const CadastreWorkflowRuntimeLive = CadastreSyncRuntimeLive.pipe(
-  Layer.provide(WorkflowEngineLive),
+  Layer.provideMerge(WorkflowEngineLive),
 );

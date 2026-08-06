@@ -25,10 +25,16 @@ export class CadastreWorkflowNotImplemented extends Schema.TaggedErrorClass<Cada
   { activity: Schema.String, message: Schema.String },
 ) {}
 
+export class CadastreDownloadLinkError extends Schema.TaggedErrorClass<CadastreDownloadLinkError>()(
+  "CadastreDownloadLinkError",
+  { message: Schema.String },
+) {}
+
 export const CadastreActivityErrorSchema = Schema.Union([
   CadastreWorkflowConfigError,
   CadastreWorkflowHttpError,
   CadastreWorkflowJsonError,
   CadastreWorkflowProviderError,
   CadastreWorkflowNotImplemented,
+  CadastreDownloadLinkError,
 ]);

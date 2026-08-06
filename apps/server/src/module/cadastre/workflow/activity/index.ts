@@ -16,6 +16,7 @@ export {
   CadastreWorkflowJsonError,
   CadastreWorkflowNotImplemented,
   CadastreWorkflowProviderError,
+  CadastreDownloadLinkError,
 } from "./cadastre-workflow-error.schema";
 
 export const ActivityNames = [

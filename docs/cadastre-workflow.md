@@ -1,11 +1,17 @@
-# Cadastre sync workflow scaffold
+# Cadastre sync workflow
 
 The workflow boundary is `CadastreSyncWorkflow` and its stable activity names are
-defined in `apps/server/src/module/cadastre/workflow/cadastre.workflow.ts`.
-Downloads, GDAL/PostGIS import, PMTiles and object storage remain intentionally
-unimplemented. The request step calls the configured export provider and the
-email step polls the ingestion database; downstream work still fails with
-`CadastreWorkflowNotImplemented`.
+defined in `apps/server/src/module/cadastre/workflow/cadastre-workflow.workflow.ts`.
+The protected manual trigger is `POST /workflows/cadastre-sync` with a Bearer
+token in `CADASTRE_WORKFLOW_TRIGGER_TOKEN` and body `{"idempotencyKey":"manual-example"}`
+(the key is optional). Email download-link extraction is implemented; the next
+blocker is the `download-gdb` activity, followed by the GDAL/PostGIS and publish steps.
+
+```sh
+curl -X POST "http://localhost:${PORT:-3000}/workflows/cadastre-sync" \
+  -H "authorization: Bearer <CADASTRE_WORKFLOW_TRIGGER_TOKEN>" \
+  -H 'content-type: application/json' -d '{}'
+```
 
 Export requests use `CADASTRE_EXPORT_EMAIL`, defaulting to
 `cadastre-export-staging@decoco.work`. The wait step matches that recipient and
@@ -35,8 +41,8 @@ mode. Multi-replica support would require a socket/cluster transport and is a
 separate deployment mode, not an implicit property of PostgreSQL storage.
 
 The daily cron is registered at startup and runs at `02:00` Australia/Sydney.
-The workflow is registered in the same runtime, so a future manual HTTP trigger
-can execute it through the durable engine. Verify startup and persistence with:
+The workflow is registered in the same runtime, and the manual HTTP trigger
+executes it through the durable engine. Verify startup and persistence with:
 
 ```sh
 pnpm --filter @patch/server start

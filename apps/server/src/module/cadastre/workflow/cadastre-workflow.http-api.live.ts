@@ -1,12 +1,32 @@
-import { Effect } from "effect";
+import { Config, DateTime, Effect } from "effect";
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 import { AppApi } from "@patch/http-contract";
 import { WorkflowProjection } from "./cadastre-workflow.service";
+import { CadastreSyncWorkflow } from "./cadastre-workflow.workflow";
 
 const boundedLimit = (value: string | undefined) =>
   Math.min(100, Math.max(1, Number(value ?? 25) || 25));
 export const WorkflowLive = HttpApiBuilder.group(AppApi, "workflow", (handlers) =>
   handlers
+    .handle(
+      "triggerCadastreSync",
+      Effect.fn("WorkflowLive.triggerCadastreSync")(function* ({ headers, payload }) {
+        const expected = yield* Config.string("CADASTRE_WORKFLOW_TRIGGER_TOKEN").pipe(
+          Effect.catchTag("ConfigError", () => Effect.succeed("")),
+        );
+        if (!expected || headers.authorization !== `Bearer ${expected}`)
+          return yield* new HttpApiError.Unauthorized();
+        if (payload.idempotencyKey !== undefined && payload.idempotencyKey.trim() === "")
+          return yield* new HttpApiError.BadRequest();
+        const idempotencyKey =
+          payload.idempotencyKey ?? `manual-${DateTime.formatIso(yield* DateTime.now)}`;
+        const executionId = yield* CadastreSyncWorkflow.execute(
+          { idempotencyKey, trigger: "manual" },
+          { discard: true },
+        ).pipe(Effect.catchCause(() => Effect.fail(new HttpApiError.InternalServerError())));
+        return { executionId, idempotencyKey };
+      }),
+    )
     .handle(
       "listWorkflows",
       Effect.fn("WorkflowLive.listWorkflows")(function* ({ query }) {

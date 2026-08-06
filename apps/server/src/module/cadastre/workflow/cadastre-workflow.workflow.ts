@@ -42,9 +42,10 @@ const runCadastreSyncWorkflow = Effect.fn("CadastreSyncWorkflow.run")(function* 
   // Keep the ingested row available when extraction accepts workflow inputs.
   yield* Effect.logDebug(`cadastre export email received: ${cadastreEmail.messageId}`);
   yield* Effect.logInfo("cadastre activity started: extract-download-link");
-  yield* ExtractDownloadLinkActivity.execute;
+  const downloadUrl = yield* ExtractDownloadLinkActivity({ parsedEmail: cadastreEmail.parsedEmail })
+    .execute;
   yield* Effect.logInfo("cadastre activity started: download-gdb");
-  yield* DownloadGdbActivity.execute;
+  yield* DownloadGdbActivity({ downloadUrl }).execute;
   yield* Effect.logInfo("cadastre activity started: import-postgis");
   yield* ImportPostgisActivity.execute;
   yield* Effect.logInfo("cadastre activity started: validate-promote");

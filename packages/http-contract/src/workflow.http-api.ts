@@ -6,6 +6,16 @@ const query = { cursor: Schema.optional(Schema.String), limit: Schema.optional(S
 const internalError = [HttpApiError.InternalServerErrorNoContent] as const;
 
 export const workflowGroup = HttpApiGroup.make("workflow").add(
+  HttpApiEndpoint.post("triggerCadastreSync", "/workflows/cadastre-sync", {
+    headers: { authorization: Schema.String },
+    payload: Schema.Struct({ idempotencyKey: Schema.optional(Schema.String) }),
+    success: Schema.Struct({ executionId: Schema.String, idempotencyKey: Schema.String }),
+    error: [
+      HttpApiError.BadRequestNoContent,
+      HttpApiError.UnauthorizedNoContent,
+      HttpApiError.InternalServerErrorNoContent,
+    ],
+  }),
   HttpApiEndpoint.get("listWorkflows", "/workflows", {
     query,
     success: Schema.Struct({

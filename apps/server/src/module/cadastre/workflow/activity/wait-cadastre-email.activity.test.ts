@@ -18,6 +18,7 @@ const input: CadastreEmailWaitInput = {
 const row = {
   messageId: "message-1",
   receivedAt: DateTime.toDate(DateTime.makeUnsafe("2026-08-05T00:01:00.000Z")),
+  parsedEmail: { text: "export body", html: "<p>export body</p>" },
 };
 
 const serviceLayer = (findNewestAfter: CadastreEmailIngestionService["findNewestAfter"]) =>
@@ -39,7 +40,11 @@ describe("lookupCadastreEmailActivity", () => {
         (() => Effect.succeed(row) as never) as CadastreEmailIngestionService["findNewestAfter"],
       ),
     );
-    expect(result).toEqual({ messageId: row.messageId, receivedAt: row.receivedAt.toISOString() });
+    expect(result).toEqual({
+      messageId: row.messageId,
+      receivedAt: row.receivedAt.toISOString(),
+      parsedEmail: row.parsedEmail,
+    });
   });
 
   test("returns null when no matching row exists", async () => {
@@ -89,7 +94,11 @@ describe("wait activity with the in-memory workflow engine", () => {
     const workflowLayer = MemoryWaitWorkflow.toLayer(
       () =>
         WaitCadastreEmailActivity.execute(input, { pollCount: 1 }) as Effect.Effect<
-          { readonly messageId: string; readonly receivedAt: string },
+          {
+            readonly messageId: string;
+            readonly receivedAt: string;
+            readonly parsedEmail: unknown;
+          },
           unknown,
           never
         >,
@@ -108,6 +117,10 @@ describe("wait activity with the in-memory workflow engine", () => {
         ),
       ),
     );
-    expect(result).toEqual({ messageId: row.messageId, receivedAt: row.receivedAt.toISOString() });
+    expect(result).toEqual({
+      messageId: row.messageId,
+      receivedAt: row.receivedAt.toISOString(),
+      parsedEmail: row.parsedEmail,
+    });
   });
 });

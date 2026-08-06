@@ -30,6 +30,7 @@ const lookupCadastreEmail = Effect.fn("WaitCadastreEmailActivity.lookup")(functi
     : Schema.decodeUnknownSync(WaitCadastreEmailLookupResultSchema)({
         messageId: row.messageId,
         receivedAt: row.receivedAt.toISOString(),
+        parsedEmail: row.parsedEmail,
       });
 });
 
