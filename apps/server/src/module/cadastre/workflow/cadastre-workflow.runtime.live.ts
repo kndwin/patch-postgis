@@ -5,11 +5,12 @@ import { PgClientLive } from "../../../platform/database/client";
 import { CadastreSyncRuntimeLive } from "./cadastre-workflow.cron";
 
 /** PostgreSQL-backed runtime for the single-process server deployment. */
-export const CadastreWorkflowRuntimeLive = Layer.merge(
-  CadastreSyncRuntimeLive,
-  ClusterWorkflowEngine.layer,
-).pipe(
+const WorkflowEngineLive = ClusterWorkflowEngine.layer.pipe(
   Layer.provide(SingleRunner.layer({ runnerStorage: "sql" })),
   Layer.provide(BunCrypto.layer),
   Layer.provide(PgClientLive),
+);
+
+export const CadastreWorkflowRuntimeLive = CadastreSyncRuntimeLive.pipe(
+  Layer.provide(WorkflowEngineLive),
 );
