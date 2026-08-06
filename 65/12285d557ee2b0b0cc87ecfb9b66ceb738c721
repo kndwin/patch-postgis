@@ -1,0 +1,21 @@
+apps/server/src/module/cadastre/workflow/activity/index.ts
+  s_222a25ab0c8d18::t_2e8d4d4298754c 19
+docs/cadastre-workflow.md
+  s_222a25ab0c8d18::t_2afb061464fac6 1,4-14,44-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6512285d557ee2b0b0cc87ecfb9b66ceb738c721",
+  "prompts": {},
+  "sessions": {
+    "s_222a25ab0c8d18": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8c4615cc-14dd-4c92-97c4-dee32db4a8e8",
+        "model": "grok-4.5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
