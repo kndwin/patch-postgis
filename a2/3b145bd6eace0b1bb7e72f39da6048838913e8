@@ -1,0 +1,18 @@
+apps/browser/build-site.sh
+  h_ba3efde196eb39 1-4
+apps/server/src/module/cadastre/workflow/cadastre-workflow.runtime.live.ts
+  h_ba3efde196eb39 8,13-16
+infra/prod/cloudflare.ts
+  h_ba3efde196eb39 2,4,13,37,48-53,90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a23b145bd6eace0b1bb7e72f39da6048838913e8",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
