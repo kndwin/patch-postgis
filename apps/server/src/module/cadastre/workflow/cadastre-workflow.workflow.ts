@@ -63,9 +63,3 @@ const runCadastreSyncWorkflow = Effect.fn("CadastreSyncWorkflow.run")(function* 
 export const CadastreSyncWorkflowLive = CadastreSyncWorkflow.toLayer(runCadastreSyncWorkflow).pipe(
   Layer.provide(CadastreEmailIngestionServiceLive),
 );
-
-export {
-  CadastreSyncRuntimeLive,
-  CadastreSyncClusterCronLive,
-  cadastreSyncCron,
-} from "./cadastre-workflow.cron";
