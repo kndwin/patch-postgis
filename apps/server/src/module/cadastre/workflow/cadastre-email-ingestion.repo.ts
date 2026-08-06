@@ -15,21 +15,25 @@ export class CadastreEmailIngestionRepo extends Context.Service<CadastreEmailIng
     make: Effect.fn("CadastreEmailIngestionRepo.make")(function* () {
       const db = yield* Db;
       return {
-        upsert: (input: EmailIngestionInput) =>
-          db
+        upsert: Effect.fn("CadastreEmailIngestionRepo.upsert")(function* (
+          input: EmailIngestionInput,
+        ) {
+          const updatedAt = yield* DateTime.now;
+          return yield* db
             .insert(cadastreEmailIngestions)
-            .values({
-              ...input,
-              id: crypto.randomUUID(),
-            })
+            .values({ ...input, id: crypto.randomUUID() })
             .onConflictDoUpdate({
               target: cadastreEmailIngestions.messageId,
-              set: { ...input, updatedAt: DateTime.toDate(DateTime.nowUnsafe()) },
+              set: { ...input, updatedAt: DateTime.toDate(updatedAt) },
             })
             .returning()
-            .pipe(Effect.map(([row]) => row)),
-        findNewestAfter: (envelopeTo: string, receivedAfter: Date) =>
-          db
+            .pipe(Effect.map(([row]) => row));
+        }),
+        findNewestAfter: Effect.fn("CadastreEmailIngestionRepo.findNewestAfter")(function* (
+          envelopeTo: string,
+          receivedAfter: Date,
+        ) {
+          return yield* db
             .select()
             .from(cadastreEmailIngestions)
             .where(
@@ -40,7 +44,8 @@ export class CadastreEmailIngestionRepo extends Context.Service<CadastreEmailIng
             )
             .orderBy(desc(cadastreEmailIngestions.receivedAt))
             .limit(1)
-            .pipe(Effect.map(([row]) => row ?? null)),
+            .pipe(Effect.map(([row]) => row ?? null));
+        }),
       };
     })(),
   },

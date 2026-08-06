@@ -18,7 +18,7 @@ const WorkflowEngineLive = ClusterWorkflowEngine.layer.pipe(Layer.provideMerge(S
 export const CadastreWorkflowRuntimeLive = CadastreSyncRuntimeLive.pipe(
   Layer.provideMerge(WorkflowEngineLive),
   Layer.provideMerge(DbLive),
-  Layer.provideMerge(CadastreExportRequestRepoLive),
+  Layer.provideMerge(CadastreExportRequestRepoLive.pipe(Layer.provide(DbLive))),
   Layer.provide(
     Layer.effect(CadastreSyncService, CadastreSyncService.make).pipe(Layer.provide(DbLive)),
   ),
