@@ -43,6 +43,7 @@ export type WorkflowDetail = WorkflowExecution & {
 export type WorkflowPage = {
   readonly items: readonly WorkflowExecution[];
   readonly nextCursor: string | null;
+  readonly totalCount: number;
 };
 export type Schedule = Schema.Schema.Type<typeof ScheduleSchema>;
 export type SchedulePage = {

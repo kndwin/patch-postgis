@@ -34,7 +34,12 @@ export const projectActivity = <A, E, R>(
       yield* repo.updateWorkflow({
         id: instance.executionId,
         status: "running",
-        steps: transitionSteps(startedExecution.steps ?? [], name, "running", startedAt.toString()),
+        steps: transitionSteps(
+          startedExecution.steps ?? [],
+          name,
+          "running",
+          DateTime.formatIso(startedAt),
+        ),
       });
 
     const update = (status: "completed" | "failed", error?: string) =>
@@ -46,7 +51,12 @@ export const projectActivity = <A, E, R>(
           yield* repo.updateWorkflow({
             id: instance.executionId,
             status: activityWorkflowStatus(status),
-            steps: transitionSteps(execution.steps ?? [], name, status, finishedAt.toString()),
+            steps: transitionSteps(
+              execution.steps ?? [],
+              name,
+              status,
+              DateTime.formatIso(finishedAt),
+            ),
             ...(status === "failed" ? { failedStep: name, error: safeActivityError() } : {}),
           });
         }

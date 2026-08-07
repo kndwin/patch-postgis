@@ -21,6 +21,7 @@ export const workflowGroup = HttpApiGroup.make("workflow").add(
     success: Schema.Struct({
       items: Schema.Array(ExecutionSchema),
       nextCursor: Schema.NullOr(Schema.String),
+      totalCount: Schema.Number,
     }),
     error: internalError,
   }),

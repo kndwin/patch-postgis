@@ -1,5 +1,5 @@
 import { Context, DateTime, Effect, Layer } from "effect";
-import { and, desc, eq, gt, lt, notInArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, lt, notInArray, sql } from "drizzle-orm";
 import { EffectDrizzleQueryError } from "drizzle-orm/effect-core";
 import { Db } from "../../../platform/database/client";
 import type { WorkflowActivityAttempt, WorkflowExecution } from "./cadastre-workflow.model";
@@ -68,6 +68,7 @@ export type WorkflowDetail = WorkflowExecutionWithParsedSteps & {
 export type WorkflowPage = {
   readonly items: readonly WorkflowExecutionWithParsedSteps[];
   readonly nextCursor: string | null;
+  readonly totalCount: number;
 };
 export type SchedulePage = {
   readonly schedules: readonly {
@@ -153,6 +154,9 @@ export class WorkflowProjectionRepo extends Context.Service<
     return {
       list: (limit: number, cursor: string | undefined) =>
         Effect.fn("WorkflowProjectionRepo.list")(function* () {
+          const [{ totalCount }] = yield* db
+            .select({ totalCount: count() })
+            .from(workflowExecutions);
           // Fetch one extra to determine if there's a next page
           const fetchLimit = limit + 1;
 
@@ -183,6 +187,7 @@ export class WorkflowProjectionRepo extends Context.Service<
               steps: parseSteps(item.steps),
             })),
             nextCursor,
+            totalCount,
           };
         })(),
       detail: (id: string) =>

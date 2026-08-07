@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { useAtomValue, useAtomRefresh, useAtom } from "@effect/atom-react";
-import { runsDataAtom, workflowCursorAtom } from "./runs.atoms";
+import { runsDataAtom, workflowCursorAtom, workflowPageSizeAtom } from "./runs.atoms";
 import type { WorkflowExecution, Schedule, WorkflowPage } from "@patch/http-contract";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +28,8 @@ import {
 import { useState } from "react";
 import { IconChevronDown, IconChevronRight, IconX } from "@tabler/icons-react";
 import { runsFilterMachine, type FilterEvent } from "./runs-filter.machine";
+import { formatRunDate, parseRunDate } from "./runs-dates";
+import { Spinner } from "@/components/ui/spinner";
 
 export const Route = createFileRoute("/dashboard/runs")({
   component: Runs,
@@ -78,9 +80,7 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
         </td>
         <td className="px-3 py-2">
           <p className="text-sm font-medium text-slate-950">{execution.workflowName}</p>
-          <p className="text-xs text-slate-500">
-            {new Date(execution.startedAt).toLocaleString("en-AU")}
-          </p>
+          <p className="text-xs text-slate-500">{formatRunDate(execution.startedAt)}</p>
         </td>
         <td className="px-3 py-2">
           <Badge
@@ -93,6 +93,7 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
             }
             className="text-xs"
           >
+            {execution.status === "running" && <Spinner className="mr-1 inline size-3" />}
             {execution.status}
           </Badge>
         </td>
@@ -120,9 +121,15 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                   <div className="space-y-0">
                     {execution.steps!.map((step, idx) => {
                       const isFailedStep = step.name === execution.failedStep;
-                      const startMs = step.startedAt ? new Date(step.startedAt).getTime() : 0;
-                      const endMs = step.finishedAt ? new Date(step.finishedAt).getTime() : 0;
-                      const duration = startMs && endMs ? formatDuration(startMs, endMs) : null;
+                      const startDate =
+                        step.status !== "pending" ? parseRunDate(step.startedAt) : null;
+                      const endDate = parseRunDate(step.finishedAt);
+                      const startMs = startDate?.getTime() ?? 0;
+                      const endMs = endDate?.getTime() ?? 0;
+                      const duration =
+                        startMs && endMs && endMs >= startMs
+                          ? formatDuration(startMs, endMs)
+                          : null;
                       const isLastStep = idx === execution.steps!.length - 1;
 
                       const statusDot = isFailedStep
@@ -158,9 +165,9 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                                 {duration && (
                                   <p className="text-xs text-slate-500">Duration: {duration}</p>
                                 )}
-                                {step.startedAt && (
+                                {step.status !== "pending" && (
                                   <p className="text-xs text-slate-400">
-                                    {new Date(step.startedAt).toLocaleString("en-AU", {
+                                    {formatRunDate(step.startedAt, {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                       second: "2-digit",
@@ -178,6 +185,9 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                                 }
                                 className="text-xs shrink-0"
                               >
+                                {step.status === "running" && (
+                                  <Spinner className="mr-1 inline size-3" />
+                                )}
                                 {isFailedStep ? "failed" : step.status}
                               </Badge>
                             </div>
@@ -200,6 +210,7 @@ function Runs() {
   const result = useAtomValue(runsDataAtom);
   const refresh = useAtomRefresh(runsDataAtom);
   const [, setCursor] = useAtom(workflowCursorAtom);
+  const [pageSize, setPageSize] = useAtom(workflowPageSizeAtom);
   const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([]);
   const [machineState, setMachineState] = useState(runsFilterMachine.initial());
 
@@ -210,6 +221,7 @@ function Runs() {
   const workflowPage: WorkflowPage | undefined = data?.workflows;
   const executions: readonly WorkflowExecution[] = workflowPage?.items ?? [];
   const nextCursor = workflowPage?.nextCursor;
+  const totalCount = workflowPage?.totalCount ?? 0;
   const schedules: readonly Schedule[] = data?.schedules?.schedules ?? [];
 
   // Get filter state
@@ -246,23 +258,31 @@ function Runs() {
     })
     .sort((a, b) => {
       if (sort === "startedAt-desc") {
-        return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
+        return (
+          (parseRunDate(b.startedAt)?.getTime() ?? 0) - (parseRunDate(a.startedAt)?.getTime() ?? 0)
+        );
       } else if (sort === "startedAt-asc") {
-        return new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime();
+        return (
+          (parseRunDate(a.startedAt)?.getTime() ?? 0) - (parseRunDate(b.startedAt)?.getTime() ?? 0)
+        );
       } else if (sort === "duration-desc") {
         const durationA = a.finishedAt
-          ? new Date(a.finishedAt).getTime() - new Date(a.startedAt).getTime()
+          ? (parseRunDate(a.finishedAt)?.getTime() ?? 0) -
+            (parseRunDate(a.startedAt)?.getTime() ?? 0)
           : 0;
         const durationB = b.finishedAt
-          ? new Date(b.finishedAt).getTime() - new Date(b.startedAt).getTime()
+          ? (parseRunDate(b.finishedAt)?.getTime() ?? 0) -
+            (parseRunDate(b.startedAt)?.getTime() ?? 0)
           : 0;
         return durationB - durationA;
       } else if (sort === "duration-asc") {
         const durationA = a.finishedAt
-          ? new Date(a.finishedAt).getTime() - new Date(a.startedAt).getTime()
+          ? (parseRunDate(a.finishedAt)?.getTime() ?? 0) -
+            (parseRunDate(a.startedAt)?.getTime() ?? 0)
           : 0;
         const durationB = b.finishedAt
-          ? new Date(b.finishedAt).getTime() - new Date(b.startedAt).getTime()
+          ? (parseRunDate(b.finishedAt)?.getTime() ?? 0) -
+            (parseRunDate(b.startedAt)?.getTime() ?? 0)
           : 0;
         return durationA - durationB;
       }
@@ -291,11 +311,14 @@ function Runs() {
   };
 
   const pageNum = cursorHistory.filter((c) => c !== null).length + 1;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   // Group executions by ISO date (yyyy-mm-dd) for the chart
   const executionsByDate = new Map<string, number>();
   executions.forEach((exec) => {
-    const date = exec.startedAt.slice(0, 10);
+    const parsed = parseRunDate(exec.startedAt);
+    if (!parsed) return;
+    const date = parsed.toISOString().slice(0, 10);
     executionsByDate.set(date, (executionsByDate.get(date) ?? 0) + 1);
   });
 
@@ -503,7 +526,9 @@ function Runs() {
                   Recent workflow executions
                 </h2>
               </div>
-              <p className="text-sm text-slate-600">Page {pageNum}</p>
+              <p className="text-sm text-slate-600">
+                Page {pageNum} / {totalPages}
+              </p>
             </div>
             {executions.length === 0 ? (
               <Card>
@@ -548,6 +573,30 @@ function Runs() {
                         <SelectItem value="running">Running</SelectItem>
                       </SelectContent>
                     </Select>
+
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="runs-page-size" className="text-sm text-slate-600">
+                        Rows per page
+                      </label>
+                      <Select
+                        value={String(pageSize)}
+                        onValueChange={(value) => {
+                          setPageSize(Number(value));
+                          setCursorHistory([]);
+                          setCursor(null);
+                          refresh();
+                        }}
+                      >
+                        <SelectTrigger id="runs-page-size" className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
                     <Select
                       value={sort}
@@ -646,7 +695,9 @@ function Runs() {
                   >
                     Previous
                   </Button>
-                  <span className="text-sm text-slate-600">Page {pageNum}</span>
+                  <span className="text-sm text-slate-600">
+                    Page {pageNum} / {totalPages}
+                  </span>
                   <Button variant="outline" size="sm" onClick={handleNext} disabled={!nextCursor}>
                     Next
                   </Button>
