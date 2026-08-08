@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { Cause, Context, DateTime, Effect, Ref, Schema } from "effect";
+import { PgClient } from "@effect/sql-pg";
 import { Db } from "../../../platform/database/client";
 import { cadastreSnapshots, cadastreSyncRuns } from "./cadastre-sync.model";
 
@@ -29,6 +30,7 @@ export class SyncAlreadyRunningError extends Schema.TaggedErrorClass<SyncAlready
 // ---------------------------------------------------------------------------
 
 const LIVE_TABLE = "cadastre_lots";
+const IMPORT_LOCK = "cadastre_lots_import";
 
 export function parseRunHash(objectKey: string): string {
   const match = /^runs\/([0-9a-f]{64})\/source\/export\.zip$/.exec(objectKey);
@@ -255,6 +257,76 @@ function ogr2OgrError(exitCode: number, redactedPg: string): string {
   return `ogr2ogr exited with code ${exitCode}. ` + `Connection: PG:${redactedPg}.`;
 }
 
+const quoteIdentifier = (identifier: string): string => {
+  if (!/^[a-z_][a-z0-9_]{0,62}$/.test(identifier)) throw new Error("Invalid SQL identifier");
+  return `"${identifier}"`;
+};
+
+/** Run GDAL in its own process group so interruption cannot orphan its helpers. */
+export const runOgr2Ogr = Effect.fn("CadastreSyncService.runOgr2Ogr")(function* (
+  args: readonly string[],
+  environment: Record<string, string | undefined>,
+) {
+  return yield* Effect.acquireUseRelease(
+    Effect.try({
+      try: () =>
+        Bun.spawn(["ogr2ogr", ...args], {
+          stdout: "pipe",
+          stderr: "pipe",
+          env: environment,
+          detached: true,
+        }),
+      catch: () => new SyncError({ message: "GDAL/ogr2ogr is required but could not be started" }),
+    }),
+    (proc: Bun.Subprocess) => {
+      const stderr =
+        proc.stderr && typeof proc.stderr !== "number"
+          ? new Response(proc.stderr).text()
+          : Promise.resolve("");
+      const stdout =
+        proc.stdout && typeof proc.stdout !== "number"
+          ? new Response(proc.stdout).text()
+          : Promise.resolve("");
+      return Effect.promise(() => Promise.all([proc.exited, stdout, stderr])).pipe(
+        Effect.map(([exitCode, stdoutText, stderrText]) => ({
+          exitCode,
+          stdout: stdoutText,
+          stderr: stderrText,
+        })),
+      );
+    },
+    (process: Bun.Subprocess) =>
+      Effect.sync(() => {
+        try {
+          // detached Bun children are process-group leaders on POSIX.
+          process.kill("SIGTERM");
+          if (process.pid !== undefined) globalThis.process.kill(-process.pid, "SIGTERM");
+        } catch {
+          // It may have exited between the check and the signal.
+        }
+      }).pipe(
+        Effect.andThen(
+          Effect.promise(() => process.exited).pipe(
+            Effect.timeoutOption("5 seconds"),
+            Effect.flatMap((exited) =>
+              exited._tag === "Some"
+                ? Effect.void
+                : Effect.sync(() => {
+                    try {
+                      process.kill("SIGKILL");
+                      if (process.pid !== undefined)
+                        globalThis.process.kill(-process.pid, "SIGKILL");
+                    } catch {
+                      // Already gone.
+                    }
+                  }),
+            ),
+          ),
+        ),
+      ),
+  );
+});
+
 // ---------------------------------------------------------------------------
 // Sync service
 // ---------------------------------------------------------------------------
@@ -288,7 +360,7 @@ interface CadastreSyncServiceContract {
     sourcePath: string,
     runHash: string,
     source: ImportedCadastre["source"],
-  ) => Effect.Effect<ImportedCadastre, SyncError, unknown>;
+  ) => Effect.Effect<ImportedCadastre, SyncError | SyncAlreadyRunningError, unknown>;
   readonly validateAndPromote: (
     imported: ImportedCadastre,
   ) => Effect.Effect<PromotedCadastre, SyncError, unknown>;
@@ -322,6 +394,7 @@ export class CadastreSyncService extends Context.Service<
 >()("CadastreSyncService", {
   make: Effect.fn("CadastreSyncService.make")(function* () {
     const db = yield* Db;
+    const pg = yield* PgClient.PgClient;
     const runningRef = yield* Ref.make(false);
 
     const importToStaging = Effect.fn("CadastreSyncService.importToStaging")(function* (
@@ -336,68 +409,103 @@ export class CadastreSyncService extends Context.Service<
       const rawUrl =
         process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/patch_postgis";
       const { safePgConnString, redacted: redactedPg, password } = parseDatabaseUrl(rawUrl);
-      yield* wrapDbOps(
-        db.execute(sql.raw(`DROP TABLE IF EXISTS ${ids.table}`)),
-        "Failed to reset staging table",
-      );
-      yield* wrapDbOps(
-        db.execute(
-          sql.raw(
-            `CREATE TABLE ${ids.table} (id text PRIMARY KEY, lot_number text NOT NULL, geometry geometry(MultiPolygon,4326))`,
-          ),
+      return yield* Effect.scoped(
+        Effect.fn("CadastreSyncService.importWithLock")(function* () {
+          // This connection must remain checked out for the complete import:
+          // ordinary Drizzle statements and ogr2ogr use other connections.
+          const reserved = yield* pg.reserve;
+          let locked = false;
+          const lock = function acquireImportLock(): Effect.Effect<void, unknown, unknown> {
+            return Effect.fn("CadastreSyncService.acquireImportLock")(function* () {
+              const result = yield* reserved.executeRaw(
+                "SELECT pg_try_advisory_lock(hashtext($1)) AS locked",
+                [IMPORT_LOCK],
+              );
+              locked = Boolean((result as { rows: { locked: boolean }[] }).rows[0]?.locked);
+              if (!locked) {
+                yield* Effect.sleep("5 seconds");
+                return yield* lock();
+              }
+            })();
+          };
+          yield* lock().pipe(
+            Effect.timeoutOrElse({
+              duration: "30 minutes",
+              orElse: () =>
+                Effect.fail(
+                  new SyncAlreadyRunningError({ message: "Another cadastre import is active" }),
+                ),
+            }),
+          );
+          let completed = false;
+          return yield* Effect.fn("CadastreSyncService.runImport")(function* () {
+            yield* wrapDbOps(
+              db.execute(sql.raw(`DROP TABLE IF EXISTS ${quoteIdentifier(ids.table)}`)),
+              "Failed to reset staging table",
+            );
+            yield* wrapDbOps(
+              db.execute(
+                sql.raw(
+                  `CREATE TABLE ${quoteIdentifier(ids.table)} (id text PRIMARY KEY, lot_number text NOT NULL, geometry geometry(MultiPolygon,4326))`,
+                ),
+              ),
+              "Failed to create staging table",
+            );
+            const args = buildOgr2OgrArgs(sourcePath, safePgConnString, ids.table);
+            const { exitCode } = yield* runOgr2Ogr(args, databaseToolEnvironment(password));
+            if (exitCode !== 0)
+              return yield* new SyncError({ message: ogr2OgrError(exitCode, redactedPg) });
+            yield* wrapDbOps(
+              db.execute(
+                sql.raw(
+                  `CREATE INDEX ${quoteIdentifier(ids.index)} ON ${quoteIdentifier(ids.table)} USING gist (geometry)`,
+                ),
+              ),
+              "Failed to create staging index",
+            );
+            const result = yield* wrapDbOps(
+              db.execute<Record<string, unknown>>(
+                sql.raw(`SELECT COUNT(*)::int AS cnt FROM ${quoteIdentifier(ids.table)}`),
+              ),
+              "Failed to count staging rows",
+            );
+            const lotCount = Number(
+              (result as unknown as { rows: { cnt: number }[] }).rows[0]?.cnt ?? 0,
+            );
+            if (lotCount <= 0)
+              return yield* new SyncError({ message: "Imported staging table contains no lots" });
+            completed = true;
+            return {
+              source,
+              runHash,
+              stagingTable: ids.table,
+              stagingIndex: ids.index,
+              lotCount,
+            } satisfies ImportedCadastre;
+          })().pipe(
+            Effect.ensuring(
+              Effect.uninterruptible(
+                Effect.fn("CadastreSyncService.cleanupImport")(function* () {
+                  if (!completed)
+                    yield* db
+                      .execute(sql.raw(`DROP TABLE IF EXISTS ${quoteIdentifier(ids.table)}`))
+                      .pipe(Effect.catchCause(() => Effect.succeed(undefined)));
+                  if (locked)
+                    yield* reserved
+                      .executeRaw("SELECT pg_advisory_unlock(hashtext($1))", [IMPORT_LOCK])
+                      .pipe(Effect.catchCause(() => Effect.succeed(undefined)));
+                })(),
+              ).pipe(Effect.catchCause(() => Effect.void)),
+            ),
+          );
+        })(),
+      ).pipe(
+        Effect.mapError((error) =>
+          error instanceof SyncAlreadyRunningError || error instanceof SyncError
+            ? error
+            : new SyncError({ message: `Import failed: ${String(error)}` }),
         ),
-        "Failed to create staging table",
       );
-      const args = buildOgr2OgrArgs(sourcePath, safePgConnString, ids.table);
-      const proc = yield* Effect.try({
-        try: () =>
-          Bun.spawn(["ogr2ogr", ...args], {
-            stdout: "pipe",
-            stderr: "pipe",
-            env: databaseToolEnvironment(password),
-          }),
-        catch: () =>
-          new SyncError({
-            message: "GDAL/ogr2ogr is required but could not be started",
-          }),
-      });
-      const stderrPromise =
-        proc.stderr && typeof proc.stderr !== "number"
-          ? new Response(proc.stderr).text()
-          : Promise.resolve("");
-      const stdoutPromise =
-        proc.stdout && typeof proc.stdout !== "number"
-          ? new Response(proc.stdout).text()
-          : Promise.resolve("");
-      const [exitCode] = yield* Effect.promise(() =>
-        Promise.all([proc.exited, stdoutPromise, stderrPromise]),
-      );
-      if (exitCode !== 0)
-        return yield* new SyncError({
-          message: ogr2OgrError(exitCode, redactedPg),
-        });
-      yield* wrapDbOps(
-        db.execute(sql.raw(`CREATE INDEX ${ids.index} ON ${ids.table} USING gist (geometry)`)),
-        "Failed to create staging index",
-      );
-      const result = yield* wrapDbOps(
-        db.execute<Record<string, unknown>>(
-          sql.raw(`SELECT COUNT(*)::int AS cnt FROM ${ids.table}`),
-        ),
-        "Failed to count staging rows",
-      );
-      const lotCount = Number((result as unknown as { rows: { cnt: number }[] }).rows[0]?.cnt ?? 0);
-      if (lotCount <= 0)
-        return yield* new SyncError({
-          message: "Imported staging table contains no lots",
-        });
-      return {
-        source,
-        runHash,
-        stagingTable: ids.table,
-        stagingIndex: ids.index,
-        lotCount,
-      } satisfies ImportedCadastre;
     });
     const validateAndPromote = Effect.fn("CadastreSyncService.validateAndPromote")(function* (
       imported: ImportedCadastre,
@@ -429,12 +537,12 @@ export class CadastreSyncService extends Context.Service<
                     message: "Snapshot identity conflicts with existing snapshot",
                   }),
                 );
-              yield* tx.execute(sql.raw(`DROP TABLE IF EXISTS ${ids.table}`));
+              yield* tx.execute(sql.raw(`DROP TABLE IF EXISTS ${quoteIdentifier(ids.table)}`));
               return;
             }
             const check = yield* tx.execute<Record<string, unknown>>(
               sql.raw(
-                `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE id IS NULL OR btrim(id) = '' OR lot_number IS NULL OR btrim(lot_number) = '' OR geometry IS NULL OR ST_SRID(geometry) <> 4326 OR GeometryType(geometry) <> 'MULTIPOLYGON' OR NOT ST_IsValid(geometry))::int AS invalid FROM ${ids.table}`,
+                `SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE id IS NULL OR btrim(id) = '' OR lot_number IS NULL OR btrim(lot_number) = '' OR geometry IS NULL OR ST_SRID(geometry) <> 4326 OR GeometryType(geometry) <> 'MULTIPOLYGON' OR NOT ST_IsValid(geometry))::int AS invalid FROM ${quoteIdentifier(ids.table)}`,
               ),
             );
             const row = (check as unknown as { rows: { total: number; invalid: number }[] })
@@ -446,10 +554,16 @@ export class CadastreSyncService extends Context.Service<
               Number(row.invalid) !== 0
             )
               return yield* new SyncError({ message: "Staging validation failed" });
-            yield* tx.execute(sql.raw(`DROP TABLE IF EXISTS ${LIVE_TABLE}`));
-            yield* tx.execute(sql.raw(`ALTER TABLE ${ids.table} RENAME TO ${LIVE_TABLE}`));
+            yield* tx.execute(sql.raw(`DROP TABLE IF EXISTS ${quoteIdentifier(LIVE_TABLE)}`));
             yield* tx.execute(
-              sql.raw(`ALTER INDEX ${ids.index} RENAME TO cadastre_lots_geometry_idx`),
+              sql.raw(
+                `ALTER TABLE ${quoteIdentifier(ids.table)} RENAME TO ${quoteIdentifier(LIVE_TABLE)}`,
+              ),
+            );
+            yield* tx.execute(
+              sql.raw(
+                `ALTER INDEX ${quoteIdentifier(ids.index)} RENAME TO ${quoteIdentifier("cadastre_lots_geometry_idx")}`,
+              ),
             );
             yield* tx.insert(cadastreSnapshots).values({
               version: imported.runHash,

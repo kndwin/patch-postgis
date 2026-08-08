@@ -16,6 +16,10 @@ export class WorkflowProjection extends Context.Service<
       limit: number,
       cursor: string | undefined,
     ) => Effect.Effect<SchedulePage, EffectDrizzleQueryError>;
+    readonly cancelWorkflow: (
+      id: string,
+      finishedAt: Date,
+    ) => Effect.Effect<void, EffectDrizzleQueryError>;
   }
 >()("WorkflowProjection", {
   make: Effect.fn("WorkflowProjection.make")(function* () {
@@ -24,6 +28,7 @@ export class WorkflowProjection extends Context.Service<
       list: repo.list,
       detail: repo.detail,
       schedules: repo.schedules,
+      cancelWorkflow: repo.cancelWorkflow,
     };
   })(),
 }) {}

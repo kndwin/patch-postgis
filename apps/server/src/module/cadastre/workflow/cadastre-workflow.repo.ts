@@ -133,6 +133,10 @@ interface WorkflowProjectionRepoContract {
   readonly finishActivity: (
     input: FinishActivityInput,
   ) => Effect.Effect<void, EffectDrizzleQueryError>;
+  readonly cancelWorkflow: (
+    id: string,
+    finishedAt: Date,
+  ) => Effect.Effect<void, EffectDrizzleQueryError>;
   readonly ensureSchedule: Effect.Effect<void, EffectDrizzleQueryError>;
   readonly recordOccurrence: (
     scheduledAt: Date,
@@ -293,7 +297,7 @@ export class WorkflowProjectionRepo extends Context.Service<
           .where(
             and(
               eq(workflowExecutions.id, input.id),
-              notInArray(workflowExecutions.status, ["succeeded", "failed"]),
+              notInArray(workflowExecutions.status, ["succeeded", "failed", "cancelled"]),
             ),
           ),
       startActivity: (input: StartActivityInput) =>
@@ -316,7 +320,39 @@ export class WorkflowProjectionRepo extends Context.Service<
             finishedAt: input.finishedAt,
             ...(input.error !== undefined ? { error: input.error } : {}),
           })
-          .where(eq(workflowActivityAttempts.id, input.id)),
+          .where(
+            and(
+              eq(workflowActivityAttempts.id, input.id),
+              eq(workflowActivityAttempts.status, "running"),
+            ),
+          ),
+      cancelWorkflow: (id: string, finishedAt: Date) =>
+        Effect.fn("WorkflowProjectionRepo.cancelWorkflow")(function* () {
+          const execution = yield* db
+            .select({ steps: workflowExecutions.steps })
+            .from(workflowExecutions)
+            .where(and(eq(workflowExecutions.id, id), eq(workflowExecutions.status, "running")))
+            .limit(1);
+          if (execution.length === 0) return;
+          const steps = (parseSteps(execution[0].steps) ?? []).map((step) =>
+            step.status === "running"
+              ? { ...step, status: "cancelled", finishedAt: finishedAt.toISOString() }
+              : step,
+          );
+          yield* db
+            .update(workflowActivityAttempts)
+            .set({ status: "cancelled", finishedAt, error: null })
+            .where(
+              and(
+                eq(workflowActivityAttempts.executionId, id),
+                eq(workflowActivityAttempts.status, "running"),
+              ),
+            );
+          yield* db
+            .update(workflowExecutions)
+            .set({ status: "cancelled", finishedAt, steps: JSON.stringify(steps), error: null })
+            .where(and(eq(workflowExecutions.id, id), eq(workflowExecutions.status, "running")));
+        })(),
       ensureSchedule: db
         .insert(workflowCronSchedules)
         .values({

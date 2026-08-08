@@ -18,4 +18,7 @@ export const PgClientLive = PgClient.layer({
 const dbEffect = PgDrizzle.makeWithDefaults();
 export type Database = Effect.Success<typeof dbEffect>;
 export class Db extends Context.Service<Db, Database>()("Db") {}
-export const DbLive = Layer.effect(Db, dbEffect).pipe(Layer.provide(PgClientLive));
+// Keep the client in the layer output as well as using it to construct Drizzle.
+// Consumers which need session-scoped PostgreSQL features (for example an
+// advisory lock) must be able to reserve a connection from the same pool.
+export const DbLive = Layer.effect(Db, dbEffect).pipe(Layer.provideMerge(PgClientLive));

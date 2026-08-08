@@ -121,7 +121,7 @@ source.
 
 The sync CLI imports cadastre parcels from a local ESRI File Geodatabase
 (`.gdb` directory) into the running PostGIS instance. It imports only the
-`Lot` layer, stages new rows in a fixed `cadastre_lots_staging` table,
+`Lot` layer, stages new rows in a run-specific staging table,
 validates the result (rejecting zero-row snapshots), then atomically
 promotes the staging table in place of the live `cadastre_lots` table.
 Existing API routes (vector tiles, ArcGIS compatibility query, lot lookup)
@@ -169,7 +169,7 @@ Each sync run follows these steps:
 
 1. Clean up any stale staging table from a previous failed run.
 2. Create the `cadastre_lots_staging` table with the exact DDL contract
-   (`id text PRIMARY KEY`, `lot_number text NOT NULL`,
+    (`id text PRIMARY KEY`, `lot_number text NOT NULL`,
    `geometry geometry(MultiPolygon,4326)`).
 3. Run `ogr2ogr` against the `Lot` layer, appending rows into the pre-created
    staging table. The layer query renames `cadid` → `id` and
@@ -183,9 +183,12 @@ Each sync run follows these steps:
    index to match the canonical `cadastre_lots_geometry_idx` name. The swap
    is atomic — other sessions see either the old or the new table, never an
    in-between state.
-7. If the sync fails before promotion, the live `cadastre_lots` table is
-   untouched. The staging table may persist on disk; the next sync run cleans
-   it up automatically (`DROP TABLE IF EXISTS`).
+7. The complete import (staging creation through indexing and counting) holds
+   one PostgreSQL session-level advisory lock, with a bounded wait, so workflow
+   retries and multiple server processes cannot import concurrently.
+8. If the import fails or is interrupted, GDAL is terminated as a process group
+   (TERM, then bounded KILL) and its run-specific staging table is dropped.
+   The live `cadastre_lots` table is never used for failure cleanup.
 
 No downtime is required, and existing API routes continue to return results
 from the previous snapshot throughout the sync.

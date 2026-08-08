@@ -28,6 +28,26 @@ export const WorkflowLive = HttpApiBuilder.group(AppApi, "workflow", (handlers) 
       }),
     )
     .handle(
+      "cancelWorkflow",
+      Effect.fn("WorkflowLive.cancelWorkflow")(function* ({ headers, params }) {
+        const expected = yield* Config.string("CADASTRE_WORKFLOW_TRIGGER_TOKEN").pipe(
+          Effect.catchTag("ConfigError", () => Effect.succeed("")),
+        );
+        if (!expected || headers.authorization !== `Bearer ${expected}`)
+          return yield* new HttpApiError.Unauthorized();
+        if (!/^[0-9a-f]{32}$/.test(params.executionId)) return yield* new HttpApiError.BadRequest();
+        yield* CadastreSyncWorkflow.interrupt(params.executionId);
+        const projection = yield* WorkflowProjection;
+        const finishedAt = yield* DateTime.now;
+        yield* projection.cancelWorkflow(params.executionId, DateTime.toDate(finishedAt)).pipe(
+          Effect.catchTags({
+            EffectDrizzleQueryError: () => Effect.fail(new HttpApiError.InternalServerError()),
+          }),
+        );
+        return { executionId: params.executionId, status: "cancelled" as const };
+      }),
+    )
+    .handle(
       "listWorkflows",
       Effect.fn("WorkflowLive.listWorkflows")(function* ({ query }) {
         const service = yield* WorkflowProjection;

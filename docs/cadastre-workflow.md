@@ -4,6 +4,9 @@ The workflow boundary is `CadastreSyncWorkflow`; its stable activity names are d
 `apps/server/src/module/cadastre/workflow/cadastre-workflow.workflow.ts`. The protected manual
 trigger is `POST /workflows/cadastre-sync` with a Bearer token in
 `CADASTRE_WORKFLOW_TRIGGER_TOKEN` and an optional `idempotencyKey`.
+Running executions can be stopped with the same token via `POST /workflows/:executionId/cancel`.
+The execution ID must be exactly 32 lowercase hex characters. Cancellation is idempotent and
+returns `{ "executionId": "...", "status": "cancelled" }`.
 
 Email download-link extraction, source artifact handoff, PostGIS import, validation, atomic
 promotion, PMTiles build, multipart upload, final HEAD/public range and metadata verification, and

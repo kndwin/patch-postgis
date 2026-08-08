@@ -60,17 +60,18 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
   const [expanded, setExpanded] = useState(false);
   const hasSteps = execution.steps && execution.steps.length > 0;
   const isFailed = execution.status === "failed";
+  const isCancelled = execution.status === "cancelled";
 
   return (
     <>
       <tr
         onClick={() => {
-          if (hasSteps || isFailed) setExpanded(!expanded);
+          if (hasSteps || isFailed || isCancelled) setExpanded(!expanded);
         }}
-        className={`border-b border-slate-200 ${hasSteps || isFailed ? "cursor-pointer hover:bg-slate-50" : ""}`}
+        className={`border-b border-slate-200 ${hasSteps || isFailed || isCancelled ? "cursor-pointer hover:bg-slate-50" : ""}`}
       >
         <td className="px-3 py-2">
-          {hasSteps || isFailed ? (
+          {hasSteps || isFailed || isCancelled ? (
             expanded ? (
               <IconChevronDown className="h-4 w-4 text-slate-400" />
             ) : (
@@ -100,7 +101,7 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
         <td className="px-3 py-2 text-sm text-slate-600">{execution.trigger}</td>
       </tr>
 
-      {expanded && (hasSteps || isFailed) && (
+      {expanded && (hasSteps || isFailed || isCancelled) && (
         <tr className="border-b border-slate-200 bg-slate-50">
           <td colSpan={4} className="px-3 py-4">
             <div className="space-y-4">
@@ -557,7 +558,7 @@ function Runs() {
                       onValueChange={(value) =>
                         transitionMachine({
                           _tag: "StatusFilterSet",
-                          status: value as "all" | "succeeded" | "failed" | "running",
+                          status: value as "all" | "succeeded" | "failed" | "running" | "cancelled",
                         })
                       }
                     >
@@ -571,6 +572,7 @@ function Runs() {
                         <SelectItem value="succeeded">Succeeded</SelectItem>
                         <SelectItem value="failed">Failed</SelectItem>
                         <SelectItem value="running">Running</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
 

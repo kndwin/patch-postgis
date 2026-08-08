@@ -4,12 +4,23 @@ import { ActivitySchema, ExecutionSchema, ScheduleSchema } from "./workflow.sche
 
 const query = { cursor: Schema.optional(Schema.String), limit: Schema.optional(Schema.String) };
 const internalError = [HttpApiError.InternalServerErrorNoContent] as const;
+const executionId = Schema.String;
 
 export const workflowGroup = HttpApiGroup.make("workflow").add(
   HttpApiEndpoint.post("triggerCadastreSync", "/workflows/cadastre-sync", {
     headers: { authorization: Schema.String },
     payload: Schema.Struct({ idempotencyKey: Schema.optional(Schema.String) }),
     success: Schema.Struct({ executionId: Schema.String, idempotencyKey: Schema.String }),
+    error: [
+      HttpApiError.BadRequestNoContent,
+      HttpApiError.UnauthorizedNoContent,
+      HttpApiError.InternalServerErrorNoContent,
+    ],
+  }),
+  HttpApiEndpoint.post("cancelWorkflow", "/workflows/:executionId/cancel", {
+    headers: { authorization: Schema.String },
+    params: { executionId },
+    success: Schema.Struct({ executionId, status: Schema.Literal("cancelled") }),
     error: [
       HttpApiError.BadRequestNoContent,
       HttpApiError.UnauthorizedNoContent,

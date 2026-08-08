@@ -9,7 +9,7 @@ export type SearchChanged = {
 
 export type StatusFilterSet = {
   readonly _tag: "StatusFilterSet";
-  readonly status: "all" | "succeeded" | "failed" | "running";
+  readonly status: "all" | "succeeded" | "failed" | "running" | "cancelled";
 };
 
 export type SortChanged = {
@@ -27,7 +27,7 @@ export type FilterEvent = SearchChanged | StatusFilterSet | SortChanged | ResetF
 export type FilterState = {
   readonly _tag: "Idle";
   readonly searchQuery: string;
-  readonly statusFilter: "all" | "succeeded" | "failed" | "running";
+  readonly statusFilter: "all" | "succeeded" | "failed" | "running" | "cancelled";
   readonly sort: "startedAt-desc" | "startedAt-asc" | "duration-desc" | "duration-asc";
 };
 
