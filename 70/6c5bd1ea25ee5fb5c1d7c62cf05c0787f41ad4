@@ -1,0 +1,32 @@
+README.md
+  h_ba3efde196eb39 124,172,186-191
+apps/browser/src/module/dashboard/runs-filter.machine.ts
+  h_ba3efde196eb39 12,30
+apps/browser/src/module/dashboard/runs.route.tsx
+  h_ba3efde196eb39 63,69,71,74,104,561,575
+apps/server/src/module/cadastre/sync/cadastre-sync.service.ts
+  h_ba3efde196eb39 6,33,260-329,363,397,412-506,540,545,557,559-566
+apps/server/src/module/cadastre/workflow/cadastre-workflow.http-api.live.ts
+  h_ba3efde196eb39 30-49
+apps/server/src/module/cadastre/workflow/cadastre-workflow.repo.ts
+  h_ba3efde196eb39 136-139,300,323-355
+apps/server/src/module/cadastre/workflow/cadastre-workflow.service.ts
+  h_ba3efde196eb39 19-22,31
+apps/server/src/platform/database/client.ts
+  h_ba3efde196eb39 21-24
+docs/cadastre-workflow.md
+  h_ba3efde196eb39 7-9
+packages/http-contract/src/workflow.http-api.ts
+  h_ba3efde196eb39 7,20-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "706c5bd1ea25ee5fb5c1d7c62cf05c0787f41ad4",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
