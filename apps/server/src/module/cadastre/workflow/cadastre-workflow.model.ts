@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { bigint, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 /** Application-owned projection. Effect's cluster tables are deliberately not queried by the dashboard. */
 export const workflowExecutions = pgTable(
@@ -14,9 +14,20 @@ export const workflowExecutions = pgTable(
     error: text("error"),
     failedStep: text("failed_step"),
     steps: text("steps"), // JSON array stored as text
+    parentExecutionId: text("parent_execution_id"),
+    retryAttempt: integer("retry_attempt"),
   },
   (table) => [index("workflow_executions_started_at_idx").on(table.startedAt)],
 );
+
+export const workflowSourceArtifacts = pgTable("workflow_source_artifacts", {
+  executionId: text("execution_id").primaryKey(),
+  objectKey: text("object_key").notNull(),
+  size: bigint("size", { mode: "number" }).notNull(),
+  etag: text("etag").notNull(),
+  checksum: text("checksum"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+});
 
 export const workflowActivityAttempts = pgTable(
   "workflow_activity_attempts",

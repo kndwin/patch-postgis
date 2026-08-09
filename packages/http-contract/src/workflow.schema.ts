@@ -26,6 +26,8 @@ export const ExecutionSchema = Schema.Struct({
   error: Schema.NullOr(Schema.String),
   failedStep: Schema.NullOr(Schema.String),
   steps: Schema.NullOr(Schema.Array(WorkflowStepSchema)),
+  parentExecutionId: Schema.NullOr(Schema.String),
+  retryAttempt: Schema.NullOr(Schema.Number),
 });
 export const ScheduleSchema = Schema.Struct({
   id: Schema.String,

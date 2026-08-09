@@ -27,6 +27,21 @@ export const workflowGroup = HttpApiGroup.make("workflow").add(
       HttpApiError.InternalServerErrorNoContent,
     ],
   }),
+  HttpApiEndpoint.post("retryFromImport", "/workflows/:executionId/retry-from-import", {
+    headers: { authorization: Schema.String },
+    params: { executionId },
+    success: Schema.Struct({
+      executionId: Schema.String,
+      parentExecutionId: Schema.String,
+      status: Schema.String,
+    }),
+    error: [
+      HttpApiError.BadRequestNoContent,
+      HttpApiError.UnauthorizedNoContent,
+      HttpApiError.ConflictNoContent,
+      HttpApiError.InternalServerErrorNoContent,
+    ],
+  }),
   HttpApiEndpoint.get("listWorkflows", "/workflows", {
     query,
     success: Schema.Struct({

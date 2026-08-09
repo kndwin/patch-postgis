@@ -342,6 +342,7 @@ export interface ImportedCadastre {
     readonly objectKey: string;
     readonly size: number;
     readonly etag: string;
+    readonly checksum: string;
   };
   readonly runHash: string;
   readonly stagingTable: string;
@@ -635,7 +636,7 @@ export class CadastreSyncService extends Context.Service<
           const runHash = Array.from(new Uint8Array(hashBuffer), (b) =>
             b.toString(16).padStart(2, "0"),
           ).join("");
-          const sourceMeta = { objectKey: source, size: 0, etag: "local" };
+          const sourceMeta = { objectKey: source, size: 0, etag: "local", checksum: "" };
           yield* wrapDbOps(
             db
               .update(cadastreSyncRuns)

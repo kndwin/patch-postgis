@@ -9,6 +9,7 @@ export const DownloadGdbSuccessSchema = Schema.Struct({
   objectKey: Schema.String,
   size: Schema.Number,
   etag: Schema.String,
+  checksum: Schema.String,
 });
 export type DownloadGdbSuccess = typeof DownloadGdbSuccessSchema.Type;
 

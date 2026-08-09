@@ -1,8 +1,10 @@
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { Config, Effect } from "effect";
+import { Config, DateTime, Effect } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { WorkflowEngine } from "effect/unstable/workflow";
+import { WorkflowProjectionRepo } from "../cadastre-workflow.repo";
 import { isTrustedCadastreDownloadUrl } from "../../../../platform/cloudflare/artifact/artifact.boundary";
 import {
   CadastreActivityErrorSchema,
@@ -28,7 +30,7 @@ export const sourceObjectKey = (idempotencyKey: string, downloadUrl: string) =>
   });
 
 export type Metadata = { objectKey?: string; size?: number; etag?: string; checksum?: string };
-type ArtifactResult = { objectKey: string; size: number; etag: string };
+type ArtifactResult = { objectKey: string; size: number; etag: string; checksum: string };
 const metadata = (value: unknown): Metadata =>
   typeof value === "object" && value !== null ? (value as Metadata) : {};
 const valid = (
@@ -65,7 +67,7 @@ export const uploadSourceArtifact = async (
       checksum: existing.headers.get("x-content-sha256") ?? "",
     };
     if (valid(result, objectKey) && result.size === size && result.checksum === checksum)
-      return { objectKey, size: result.size, etag: result.etag } satisfies ArtifactResult;
+      return { objectKey, size: result.size, etag: result.etag, checksum } satisfies ArtifactResult;
     throw new Error("Invalid existing artifact metadata");
   }
   if (existing.status !== 404) throw new Error("Artifact HEAD failed");
@@ -80,7 +82,8 @@ export const uploadSourceArtifact = async (
   );
   if (!create.ok) throw new Error("Artifact multipart session failed");
   const created = metadata(await create.json());
-  if (valid(created, objectKey) && created.size === size) return created;
+  if (valid(created, objectKey) && created.size === size)
+    return { ...created, checksum: created.checksum ?? checksum };
   const id = (created as { uploadId?: unknown }).uploadId;
   if (typeof id !== "string" || id === "") throw new Error("Invalid multipart session");
   let complete = false;
@@ -124,7 +127,12 @@ export const uploadSourceArtifact = async (
     if (!valid(result, objectKey) || result.size !== size || result.checksum !== checksum)
       throw new Error("Invalid completed artifact metadata");
     complete = true;
-    return { objectKey: result.objectKey, size: result.size, etag: result.etag };
+    return {
+      objectKey: result.objectKey,
+      size: result.size,
+      etag: result.etag,
+      checksum: result.checksum ?? checksum,
+    };
   } finally {
     if (!complete) {
       try {
@@ -202,7 +210,7 @@ export const DownloadGdbActivity = (input: DownloadGdbInput) =>
             () => new CadastreWorkflowHttpError({ message: "Unable to generate artifact key" }),
           ),
         );
-        return yield* Effect.tryPromise(async () => {
+        const result = yield* Effect.tryPromise(async () => {
           const dir = await mkdtemp(join(work, "gdb-"));
           try {
             const head = await fetch(
@@ -217,7 +225,7 @@ export const DownloadGdbActivity = (input: DownloadGdbInput) =>
                 checksum: head.headers.get("x-content-sha256") ?? "",
               };
               if (valid(found, objectKey) && /^[0-9a-f]{64}$/i.test(found.checksum))
-                return { objectKey, size: found.size, etag: found.etag };
+                return { objectKey, size: found.size, etag: found.etag, checksum: found.checksum };
               throw new Error("Invalid existing artifact metadata");
             }
             if (head.status !== 404) throw new Error("Artifact HEAD failed");
@@ -245,6 +253,22 @@ export const DownloadGdbActivity = (input: DownloadGdbInput) =>
             () => new CadastreWorkflowJsonError({ message: "Artifact transfer failed" }),
           ),
         );
+        const repo = yield* WorkflowProjectionRepo;
+        const instance = yield* WorkflowEngine.WorkflowInstance;
+        const createdAt = yield* DateTime.now;
+        yield* repo
+          .saveSourceArtifact({
+            executionId: instance.executionId,
+            ...result,
+            createdAt: DateTime.toDate(createdAt),
+          })
+          .pipe(
+            Effect.mapError(
+              () =>
+                new CadastreWorkflowJsonError({ message: "Artifact metadata persistence failed" }),
+            ),
+          );
+        return result;
       })(),
     ),
   });

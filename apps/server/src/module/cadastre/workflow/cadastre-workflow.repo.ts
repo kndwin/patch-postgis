@@ -2,12 +2,14 @@ import { Context, DateTime, Effect, Layer } from "effect";
 import { and, count, desc, eq, gt, lt, notInArray, sql } from "drizzle-orm";
 import { EffectDrizzleQueryError } from "drizzle-orm/effect-core";
 import { Db } from "../../../platform/database/client";
+import { PgClient } from "@effect/sql-pg";
 import type { WorkflowActivityAttempt, WorkflowExecution } from "./cadastre-workflow.model";
 import {
   workflowExecutions,
   workflowActivityAttempts,
   workflowCronSchedules,
   workflowCronOccurrences,
+  workflowSourceArtifacts,
 } from "./cadastre-workflow.model";
 
 interface WorkflowStep {
@@ -87,6 +89,8 @@ export type StartWorkflowInput = {
   readonly trigger: string;
   readonly idempotencyKey: string;
   readonly startedAt: Date;
+  readonly parentExecutionId?: string;
+  readonly retryAttempt?: number;
 };
 export type UpdateWorkflowInput = {
   readonly id: string;
@@ -142,6 +146,21 @@ interface WorkflowProjectionRepoContract {
     scheduledAt: Date,
     executionId: string,
   ) => Effect.Effect<void, EffectDrizzleQueryError>;
+  readonly saveSourceArtifact: (input: {
+    executionId: string;
+    objectKey: string;
+    size: number;
+    etag: string;
+    checksum?: string;
+    createdAt: Date;
+  }) => Effect.Effect<void, EffectDrizzleQueryError>;
+  readonly sourceArtifact: (
+    executionId: string,
+  ) => Effect.Effect<typeof workflowSourceArtifacts.$inferSelect | null, EffectDrizzleQueryError>;
+  readonly activeImport: () => Effect.Effect<boolean, unknown>;
+  readonly recovery: (
+    parentExecutionId: string,
+  ) => Effect.Effect<WorkflowExecution | null, EffectDrizzleQueryError>;
 }
 
 function parseSteps(stepsJson: string | null): readonly WorkflowStep[] | null {
@@ -155,6 +174,7 @@ export class WorkflowProjectionRepo extends Context.Service<
 >()("WorkflowProjectionRepo", {
   make: Effect.fn("WorkflowProjectionRepo.make")(function* () {
     const db = yield* Db;
+    const pg = yield* PgClient.PgClient;
     return {
       list: (limit: number, cursor: string | undefined) =>
         Effect.fn("WorkflowProjectionRepo.list")(function* () {
@@ -282,6 +302,8 @@ export class WorkflowProjectionRepo extends Context.Service<
             idempotencyKey: input.idempotencyKey,
             startedAt: input.startedAt,
             steps: JSON.stringify(initialSteps(input.startedAt.toISOString())),
+            parentExecutionId: input.parentExecutionId,
+            retryAttempt: input.retryAttempt,
           })
           .onConflictDoNothing(),
       updateWorkflow: (input: UpdateWorkflowInput) =>
@@ -374,6 +396,67 @@ export class WorkflowProjectionRepo extends Context.Service<
             executionId,
           })
           .onConflictDoNothing(),
+      saveSourceArtifact: (input: {
+        executionId: string;
+        objectKey: string;
+        size: number;
+        etag: string;
+        checksum?: string;
+        createdAt: Date;
+      }) =>
+        db
+          .insert(workflowSourceArtifacts)
+          .values(input)
+          .onConflictDoUpdate({ target: workflowSourceArtifacts.executionId, set: input }),
+      sourceArtifact: (executionId: string) =>
+        Effect.fn("WorkflowProjectionRepo.sourceArtifact")(function* () {
+          const rows = yield* db
+            .select()
+            .from(workflowSourceArtifacts)
+            .where(eq(workflowSourceArtifacts.executionId, executionId))
+            .limit(1);
+          return rows[0] ?? null;
+        })(),
+      activeImport: () =>
+        Effect.fn("WorkflowProjectionRepo.activeImport")(function* () {
+          // A projection row can lag the actual import. Probe the same
+          // session-scoped lock used by the importer instead.
+          return yield* Effect.scoped(
+            Effect.fn("WorkflowProjectionRepo.probeImportLock")(function* () {
+              const reserved = yield* pg.reserve;
+              let locked = false;
+              return yield* Effect.fn("WorkflowProjectionRepo.tryImportLock")(function* () {
+                const result = yield* reserved.executeRaw(
+                  "SELECT pg_try_advisory_lock(hashtext($1)) AS locked",
+                  ["cadastre_lots_import"],
+                );
+                locked = Boolean((result as { rows: { locked: boolean }[] }).rows[0]?.locked);
+                return !locked;
+              })().pipe(
+                Effect.ensuring(
+                  Effect.uninterruptible(
+                    Effect.fn("WorkflowProjectionRepo.unlockImportLock")(function* () {
+                      if (locked)
+                        yield* reserved.executeRaw("SELECT pg_advisory_unlock(hashtext($1))", [
+                          "cadastre_lots_import",
+                        ]);
+                    })().pipe(Effect.catchCause(() => Effect.void)),
+                  ),
+                ),
+              );
+            })(),
+          );
+        })(),
+      recovery: (parentExecutionId: string) =>
+        Effect.fn("WorkflowProjectionRepo.recovery")(function* () {
+          const rows = yield* db
+            .select()
+            .from(workflowExecutions)
+            .where(eq(workflowExecutions.parentExecutionId, parentExecutionId))
+            .orderBy(desc(workflowExecutions.retryAttempt))
+            .limit(1);
+          return rows[0] ?? null;
+        })(),
     };
   })(),
 }) {}

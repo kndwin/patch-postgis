@@ -5,6 +5,7 @@ export {
   workflowActivityAttempts,
   workflowCronSchedules,
   workflowCronOccurrences,
+  workflowSourceArtifacts,
 } from "../../module/cadastre/workflow/cadastre-workflow.model";
 export {
   cadastreSnapshots,
