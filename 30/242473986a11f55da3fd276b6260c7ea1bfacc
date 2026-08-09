@@ -1,0 +1,36 @@
+apps/server/src/module/cadastre/sync/cadastre-sync.service.ts
+  h_ba3efde196eb39 345,639
+apps/server/src/module/cadastre/workflow/activity/download-gdb.activity.schema.ts
+  h_ba3efde196eb39 12
+apps/server/src/module/cadastre/workflow/activity/download-gdb.activity.ts
+  h_ba3efde196eb39 3,6-7,33,70,85-86,130-135,213,228,256-271
+apps/server/src/module/cadastre/workflow/cadastre-workflow.http-api.live.ts
+  h_ba3efde196eb39 6,31-134
+apps/server/src/module/cadastre/workflow/cadastre-workflow.model.ts
+  h_ba3efde196eb39 1,17-18,23-31
+apps/server/src/module/cadastre/workflow/cadastre-workflow.repo.ts
+  h_ba3efde196eb39 5,12,92-93,149-163,177,305-306,399-459
+apps/server/src/module/cadastre/workflow/cadastre-workflow.workflow.ts
+  h_ba3efde196eb39 25-39,43-73,85-93,140,147-148,150-155
+apps/server/src/platform/database/migration/20260810120000_retry_from_import/migration.sql
+  h_ba3efde196eb39 1-13
+apps/server/src/platform/database/schema.ts
+  h_ba3efde196eb39 8
+docs/retry-from-import.md
+  h_ba3efde196eb39 1-25
+packages/http-contract/src/workflow.http-api.ts
+  h_ba3efde196eb39 30-44
+packages/http-contract/src/workflow.schema.ts
+  h_ba3efde196eb39 29-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "30242473986a11f55da3fd276b6260c7ea1bfacc",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
