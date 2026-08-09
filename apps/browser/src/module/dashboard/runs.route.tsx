@@ -90,11 +90,13 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                 ? "default"
                 : execution.status === "failed"
                   ? "destructive"
-                  : "secondary"
+                  : execution.status === "running"
+                    ? "outline"
+                    : "secondary"
             }
-            className="text-xs"
+            className={`text-xs ${execution.status === "running" ? "border-blue-200 bg-blue-100 text-blue-700" : ""}`}
           >
-            {execution.status === "running" && <Spinner className="mr-1 inline size-3" />}
+            {execution.status === "running" && <Spinner className="size-3" />}
             {execution.status}
           </Badge>
         </td>
@@ -122,6 +124,7 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                   <div className="space-y-0">
                     {execution.steps!.map((step, idx) => {
                       const isFailedStep = step.name === execution.failedStep;
+                      const isRunningStep = step.status === "running" && !isFailedStep;
                       const startDate =
                         step.status !== "pending" ? parseRunDate(step.startedAt) : null;
                       const endDate = parseRunDate(step.finishedAt);
@@ -182,13 +185,13 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                                     ? "destructive"
                                     : step.status === "completed"
                                       ? "default"
-                                      : "secondary"
+                                      : isRunningStep
+                                        ? "outline"
+                                        : "secondary"
                                 }
-                                className="text-xs shrink-0"
+                                className={`text-xs shrink-0 ${isRunningStep ? "border-blue-200 bg-blue-100 text-blue-700" : ""}`}
                               >
-                                {step.status === "running" && (
-                                  <Spinner className="mr-1 inline size-3" />
-                                )}
+                                {isRunningStep && <Spinner className="size-3" />}
                                 {isFailedStep ? "failed" : step.status}
                               </Badge>
                             </div>
