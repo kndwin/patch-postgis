@@ -22,11 +22,13 @@
     "drizzle-orm": "1.0.0-rc.4",
     "effect": "4.0.0-beta.102",
     "effect-cf": "0.17.1",
+    "pg": "8.22.0",
     "postal-mime": "^2.7.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260801.1",
     "@types/bun": "latest",
+    "@types/pg": "8.21.0",
     "drizzle-kit": "1.0.0-rc.4",
     "effect-oxlint": "^0.2.0",
     "oxlint": "^1.60.0",

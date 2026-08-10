@@ -40,7 +40,7 @@ export default defineRailway((ctx) => {
       dockerfilePath: "apps/server/Dockerfile",
     },
     start: "bun src/main.ts",
-    preDeploy: "bunx --bun drizzle-kit migrate --config /app/drizzle.config.ts",
+    preDeploy: "bun src/platform/database/migrate.ts",
     healthcheck: "/health",
     volumeMounts: {
       "/data/cadastre": cadastreWork,
