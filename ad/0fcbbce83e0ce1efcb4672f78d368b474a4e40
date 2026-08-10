@@ -1,0 +1,20 @@
+apps/server/package.json
+  h_ba3efde196eb39 25,31
+apps/server/src/platform/database/migrate.ts
+  h_ba3efde196eb39 1-33
+infra/prod/railway.ts
+  h_ba3efde196eb39 43
+pnpm-lock.yaml
+  h_ba3efde196eb39 23,156,163-165,176-178,2318-2320,4157-4158,4177-4185,6973-6978,7163,7210,7564,7572,7580,7588,7592,8619-8624,8648,8654-8664
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ad0fcbbce83e0ce1efcb4672f78d368b474a4e40",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
