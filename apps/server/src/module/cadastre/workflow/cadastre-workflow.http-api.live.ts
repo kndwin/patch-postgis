@@ -1,13 +1,14 @@
-import { Config, DateTime, Effect } from "effect";
+import { Config, DateTime, Effect, Layer } from "effect";
 import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi";
 import { AppApi } from "@patch/http-contract";
+import { DbLive } from "../../../platform/database/client";
 import { WorkflowProjection } from "./cadastre-workflow.service";
 import { CadastreSyncWorkflow } from "./cadastre-workflow.workflow";
-import { WorkflowProjectionRepo } from "./cadastre-workflow.repo";
+import { WorkflowProjectionRepo, WorkflowProjectionRepoLive } from "./cadastre-workflow.repo";
 
 const boundedLimit = (value: string | undefined) =>
   Math.min(100, Math.max(1, Number(value ?? 25) || 25));
-export const WorkflowLive = HttpApiBuilder.group(AppApi, "workflow", (handlers) =>
+const WorkflowHandlersLive = HttpApiBuilder.group(AppApi, "workflow", (handlers) =>
   handlers
     .handle(
       "triggerCadastreSync",
@@ -205,4 +206,9 @@ export const WorkflowLive = HttpApiBuilder.group(AppApi, "workflow", (handlers) 
         );
       }),
     ),
+);
+
+export const WorkflowLive = WorkflowHandlersLive.pipe(
+  Layer.provide(WorkflowProjectionRepoLive),
+  Layer.provide(DbLive),
 );
