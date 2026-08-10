@@ -1,0 +1,14 @@
+apps/server/src/module/cadastre/workflow/cadastre-workflow.http-api.live.ts
+  h_ba3efde196eb39 1,4,7,11,210-214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "37016afe0a3007905592e2d7e5258c9ef48653fc",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
