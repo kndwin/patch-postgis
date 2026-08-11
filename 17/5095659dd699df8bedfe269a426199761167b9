@@ -1,0 +1,22 @@
+apps/server/src/module/cadastre/workflow/activity/import-postgis.activity.ts
+  h_ba3efde196eb39 7,19,128-129
+apps/server/src/module/cadastre/workflow/cadastre-workflow.http-api.live.ts
+  h_ba3efde196eb39 8,85,113-114
+apps/server/src/platform/cloudflare/artifact/artifact.boundary.ts
+  h_ba3efde196eb39 21-32
+apps/server/src/platform/cloudflare/artifact/artifact.worker-handler.ts
+  h_ba3efde196eb39 9
+apps/server/src/platform/cloudflare/artifact/artifact.worker.test.ts
+  h_ba3efde196eb39 10,17-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "175095659dd699df8bedfe269a426199761167b9",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
