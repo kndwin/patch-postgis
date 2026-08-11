@@ -154,6 +154,17 @@ describe("databaseToolEnvironment", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildOgr2OgrArgs", () => {
+  test("enables PostgreSQL COPY with the exact contiguous GDAL config arguments", () => {
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
+
+    const configIndex = args.indexOf("--config");
+    expect(args.slice(configIndex, configIndex + 3)).toEqual(["--config", "PG_USE_COPY", "YES"]);
+  });
+
   test("builds an argument array with no shell metacharacters", () => {
     const args = buildOgr2OgrArgs(
       "/tmp/mydata.gdb",

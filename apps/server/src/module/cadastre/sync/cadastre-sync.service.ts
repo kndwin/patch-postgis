@@ -228,6 +228,9 @@ export function buildOgr2OgrArgs(
 ): readonly string[] {
   if (!/^[a-z_][a-z0-9_]{0,62}$/.test(stagingTable)) throw new Error("Invalid staging table");
   return [
+    "--config",
+    "PG_USE_COPY",
+    "YES",
     "-f",
     "PostgreSQL",
     `PG:${safePgConnString}`,
