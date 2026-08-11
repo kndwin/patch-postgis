@@ -73,8 +73,10 @@ export const tippecanoeArgs = (output: string, temporaryDirectory: string) =>
     "--no-progress-indicator",
     `--temporary-directory=${temporaryDirectory}`,
     "-f",
-    "/dev/stdin",
   ] as const;
+
+export const tippecanoeSpawnOptions = (stdin: ReadableStream<Uint8Array>) =>
+  ({ stdin, stdout: "pipe", stderr: "pipe" }) as const;
 
 const pipeExportToTippecanoe = async (
   databaseUrl: string,
@@ -87,11 +89,10 @@ const pipeExportToTippecanoe = async (
     stderr: "pipe",
     env: databaseToolEnvironment(password),
   });
-  const tip = Bun.spawn(["tippecanoe", ...tippecanoeArgs(output, temporaryDirectory)], {
-    stdin: ogr.stdout!,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const tip = Bun.spawn(
+    ["tippecanoe", ...tippecanoeArgs(output, temporaryDirectory)],
+    tippecanoeSpawnOptions(ogr.stdout!),
+  );
   const streams = [
     ogr.stderr && typeof ogr.stderr !== "number" ? drain(ogr.stderr) : Promise.resolve(),
     tip.stdout && typeof tip.stdout !== "number" ? drain(tip.stdout) : Promise.resolve(),
