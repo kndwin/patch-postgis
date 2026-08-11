@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Option } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
-import { useAtomValue, useAtomRefresh, useAtom } from "@effect/atom-react";
-import { runsDataAtom, workflowCursorAtom, workflowPageSizeAtom } from "./runs.atoms";
+import { useAtomValue, useAtomRefresh, useAtomSet } from "@effect/atom-react";
+import { schedulesQueryAtom, workflowQueryAtom } from "./runs.atoms";
 import type { WorkflowExecution, Schedule, WorkflowPage } from "@patch/http-contract";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import {
   BarChart,
   Bar,
@@ -25,11 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useEffect, useMemo } from "react";
 import { IconChevronDown, IconChevronRight, IconX } from "@tabler/icons-react";
-import { runsFilterMachine, type FilterEvent } from "./runs-filter.machine";
+import { RunsEvent, runsMachineAtom } from "./runs-filter.machine";
 import { formatRunDate, parseRunDate } from "./runs-dates";
 import { Spinner } from "@/components/ui/spinner";
+import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/dashboard/runs")({
   component: Runs,
@@ -56,17 +58,51 @@ function formatDuration(startMs: number, endMs: number): string {
   return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
-function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
-  const [expanded, setExpanded] = useState(false);
+function workflowProgress(execution: WorkflowExecution) {
+  const steps = execution.steps ?? [];
+  const stages = [
+    "request-dataset-api",
+    "wait-cadastre-email/*",
+    "extract-download-link",
+    "download-gdb",
+    "import-postgis",
+    "validate-promote",
+    "build-pmtiles",
+    "upload",
+    "verify-publish",
+  ];
+  const recoveryStages = new Set(stages.slice(4));
+  const applicableStages = execution.trigger === "recovery" ? recoveryStages : new Set(stages);
+  const applicableSteps = steps.filter((step) => applicableStages.has(step.name));
+  const total = applicableStages.size;
+  const completed =
+    execution.status === "succeeded"
+      ? total
+      : applicableSteps.filter((step) => step.status === "completed").length;
+  const percentage = total > 0 ? (completed / total) * 100 : 0;
+  const runningStage = applicableSteps.find((step) => step.status === "running")?.name;
+  return { completed, total, percentage, runningStage };
+}
+
+function ExecutionRow({
+  execution,
+  expanded,
+  onToggle,
+}: {
+  execution: WorkflowExecution;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   const hasSteps = execution.steps && execution.steps.length > 0;
   const isFailed = execution.status === "failed";
   const isCancelled = execution.status === "cancelled";
+  const progress = workflowProgress(execution);
 
   return (
     <>
       <tr
         onClick={() => {
-          if (hasSteps || isFailed || isCancelled) setExpanded(!expanded);
+          if (hasSteps || isFailed || isCancelled) onToggle();
         }}
         className={`border-b border-slate-200 ${hasSteps || isFailed || isCancelled ? "cursor-pointer hover:bg-slate-50" : ""}`}
       >
@@ -101,11 +137,18 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
           </Badge>
         </td>
         <td className="px-3 py-2 text-sm text-slate-600">{execution.trigger}</td>
+        <td className="min-w-52 px-3 py-2">
+          <Progress value={progress.percentage} aria-label="Workflow progress" />
+          <p className="mt-1 text-xs text-slate-500">
+            {progress.completed}/{progress.total} stages
+            {progress.runningStage ? ` · ${progress.runningStage}` : ""}
+          </p>
+        </td>
       </tr>
 
       {expanded && (hasSteps || isFailed || isCancelled) && (
         <tr className="border-b border-slate-200 bg-slate-50">
-          <td colSpan={4} className="px-3 py-4">
+          <td colSpan={5} className="px-3 py-4">
             <div className="space-y-4">
               {isFailed && execution.failedStep && (
                 <div className="rounded-md border border-red-200 bg-red-50 p-3">
@@ -122,7 +165,7 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                 <div>
                   <p className="mb-3 text-xs font-semibold text-slate-700">Execution Timeline</p>
                   <div className="space-y-0">
-                    {execution.steps!.map((step, idx) => {
+                    {execution.steps!.map((step) => {
                       const isFailedStep = step.name === execution.failedStep;
                       const isRunningStep = step.status === "running" && !isFailedStep;
                       const startDate =
@@ -134,7 +177,8 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                         startMs && endMs && endMs >= startMs
                           ? formatDuration(startMs, endMs)
                           : null;
-                      const isLastStep = idx === execution.steps!.length - 1;
+                      const isLastStep =
+                        step.name === execution.steps![execution.steps!.length - 1]?.name;
 
                       const statusDot = isFailedStep
                         ? "bg-red-500"
@@ -154,7 +198,7 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
                               : "text-slate-600";
 
                       return (
-                        <div key={idx} className="flex gap-3">
+                        <div key={step.name} className="flex gap-3">
                           <div className="flex flex-col items-center">
                             <div className={`h-3 w-3 rounded-full ${statusDot}`} />
                             {!isLastStep && <div className="mt-1 h-6 w-0.5 bg-slate-200" />}
@@ -211,33 +255,52 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
 }
 
 function Runs() {
-  const result = useAtomValue(runsDataAtom);
-  const refresh = useAtomRefresh(runsDataAtom);
-  const [, setCursor] = useAtom(workflowCursorAtom);
-  const [pageSize, setPageSize] = useAtom(workflowPageSizeAtom);
-  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([]);
-  const [machineState, setMachineState] = useState(runsFilterMachine.initial());
+  const machineResult = useAtomValue(runsMachineAtom.result);
+  const send = useAtomSet(runsMachineAtom.send);
+  const machineState = AsyncResult.isSuccess(machineResult) ? machineResult.value.value : null;
+  const cursor = machineState?.cursor ?? null;
+  const pageSize = machineState?.pageSize ?? 10;
+  const workflowQuery = useMemo(() => workflowQueryAtom({ cursor, pageSize }), [cursor, pageSize]);
+  const workflowResult = useAtomValue(workflowQuery);
+  const schedulesResult = useAtomValue(schedulesQueryAtom);
+  const refreshWorkflows = useAtomRefresh(workflowQuery);
+  const refreshSchedules = useAtomRefresh(schedulesQueryAtom);
 
-  const data = AsyncResult.isSuccess(result) ? result.value : null;
-  const isFailure = AsyncResult.isFailure(result);
-  const isLoading = AsyncResult.isWaiting(result) || AsyncResult.isInitial(result);
+  const workflowPage: WorkflowPage | undefined = AsyncResult.isSuccess(workflowResult)
+    ? workflowResult.value
+    : AsyncResult.isFailure(workflowResult) && Option.isSome(workflowResult.previousSuccess)
+      ? workflowResult.previousSuccess.value.value
+      : undefined;
+  const schedulesPage = AsyncResult.isSuccess(schedulesResult)
+    ? schedulesResult.value
+    : AsyncResult.isFailure(schedulesResult) && Option.isSome(schedulesResult.previousSuccess)
+      ? schedulesResult.previousSuccess.value.value
+      : undefined;
+  const workflowFailure = AsyncResult.isFailure(workflowResult);
+  const schedulesFailure = AsyncResult.isFailure(schedulesResult);
+  const workflowLoading = workflowPage === undefined;
+  const schedulesLoading = schedulesPage === undefined;
+  const refreshing = workflowResult.waiting || schedulesResult.waiting;
 
-  const workflowPage: WorkflowPage | undefined = data?.workflows;
   const executions: readonly WorkflowExecution[] = workflowPage?.items ?? [];
   const nextCursor = workflowPage?.nextCursor;
   const totalCount = workflowPage?.totalCount ?? 0;
-  const schedules: readonly Schedule[] = data?.schedules?.schedules ?? [];
+  const schedules: readonly Schedule[] = schedulesPage?.schedules ?? [];
 
-  // Get filter state
-  const searchQuery = machineState.searchQuery;
-  const statusFilter = machineState.statusFilter;
-  const sort = machineState.sort;
+  useEffect(() => {
+    if (!executions.some((execution) => execution.status === "running")) return;
+    const interval = window.setInterval(refreshWorkflows, 10_000);
+    return () => window.clearInterval(interval);
+  }, [executions, refreshWorkflows]);
 
-  // Helper to transition machine
-  const transitionMachine = (event: FilterEvent) => {
-    const next = runsFilterMachine.transition(machineState, event);
-    setMachineState(next);
+  const refresh = () => {
+    refreshWorkflows();
+    refreshSchedules();
   };
+
+  const searchQuery = machineState?.searchQuery ?? "";
+  const statusFilter = machineState?.statusFilter ?? "all";
+  const sort = machineState?.sort ?? "startedAt-desc";
 
   // Filter and sort executions client-side
   const filteredExecutions = executions
@@ -298,23 +361,14 @@ function Runs() {
   const shownExecutions = filteredExecutions.length;
 
   const handleNext = () => {
-    if (nextCursor) {
-      setCursorHistory([...cursorHistory, nextCursor]);
-      setCursor(nextCursor);
-      refresh();
-    }
+    if (nextCursor) send(RunsEvent.cases.NextPage.make({ nextCursor }));
   };
 
   const handlePrev = () => {
-    if (cursorHistory.length > 0) {
-      const newHistory = cursorHistory.slice(0, -1);
-      setCursorHistory(newHistory);
-      setCursor(newHistory.length > 0 ? newHistory[newHistory.length - 1] : null);
-      refresh();
-    }
+    send(RunsEvent.cases.PreviousPage.make({}));
   };
 
-  const pageNum = cursorHistory.filter((c) => c !== null).length + 1;
+  const pageNum = (machineState?.cursorHistory.length ?? 0) + 1;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   // Group executions by ISO date (yyyy-mm-dd) for the chart
@@ -332,7 +386,7 @@ function Runs() {
     .slice(-14); // Last 14 days
 
   // Next scheduled run from the API's cron occurrences
-  const occurrences = (data?.schedules?.occurrences ?? []) as ReadonlyArray<{
+  const occurrences = (schedulesPage?.occurrences ?? []) as ReadonlyArray<{
     scheduledTime: string;
   }>;
   const now = Date.now();
@@ -355,57 +409,86 @@ function Runs() {
           </p>
         </div>
         <Button variant="outline" onClick={refresh}>
-          Refresh
+          {refreshing ? "Refreshing…" : "Refresh"}
         </Button>
       </div>
 
-      {isFailure ? (
+      {schedulesFailure && schedulesPage === undefined && (
         <Card>
           <CardContent>
-            <p className="font-semibold text-red-700">Unable to load runs and schedules</p>
-            <p className="text-sm text-slate-500">Try refreshing when the service is online.</p>
+            <p className="font-semibold text-red-700">Unable to load schedules</p>
+            <p className="text-sm text-slate-500">Workflow history remains available below.</p>
           </CardContent>
         </Card>
-      ) : isLoading ? (
+      )}
+      {schedulesLoading && !schedulesFailure && (
         <Card>
           <CardContent>
-            <p className="font-medium text-slate-900">Loading runs and schedules…</p>
-            <p className="mt-1 text-sm text-slate-500">
-              Fetching workflow executions and schedule data.
-            </p>
+            <p className="font-medium text-slate-900">Loading schedules…</p>
           </CardContent>
         </Card>
-      ) : (
-        <>
-          {/* Next Scheduled Run - at the top */}
-          {schedules.length > 0 && nextRun !== null && (
-            <section className="space-y-3">
-              <div>
-                <p className="eyebrow">NEXT EXECUTION</p>
-                <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-                  Next scheduled run
-                </h2>
-              </div>
-              <Card>
-                <CardContent>
-                  <p className="text-sm text-slate-700">
-                    {nextRun.toLocaleString("en-AU", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      timeZone: "Australia/Sydney",
-                    })}{" "}
-                    <span className="text-xs text-slate-500">(Australia/Sydney)</span>
-                  </p>
-                </CardContent>
-              </Card>
-            </section>
-          )}
+      )}
+      {workflowFailure && workflowPage === undefined && (
+        <Card>
+          <CardContent>
+            <p className="font-semibold text-red-700">Unable to load workflow executions</p>
+            <p className="text-sm text-slate-500">Schedule data remains available.</p>
+          </CardContent>
+        </Card>
+      )}
+      {workflowLoading && !workflowFailure && (
+        <Card>
+          <CardContent>
+            <p className="font-medium text-slate-900">Loading workflow executions…</p>
+          </CardContent>
+        </Card>
+      )}
+      {refreshing && (workflowPage !== undefined || schedulesPage !== undefined) && (
+        <p className="text-xs text-slate-500" role="status">
+          Refreshing dashboard data…
+        </p>
+      )}
+      {workflowFailure && workflowPage !== undefined && (
+        <p className="text-xs text-amber-700" role="status">
+          Workflow refresh failed; showing the latest available data.
+        </p>
+      )}
+      {schedulesFailure && schedulesPage !== undefined && (
+        <p className="text-xs text-amber-700" role="status">
+          Schedule refresh failed; showing the latest available data.
+        </p>
+      )}
+      <>
+        {/* Next Scheduled Run - at the top */}
+        {schedulesPage !== undefined && schedules.length > 0 && nextRun !== null && (
+          <section className="space-y-3">
+            <div>
+              <p className="eyebrow">NEXT EXECUTION</p>
+              <h2 className="text-lg font-semibold tracking-tight text-slate-950">
+                Next scheduled run
+              </h2>
+            </div>
+            <Card>
+              <CardContent>
+                <p className="text-sm text-slate-700">
+                  {nextRun.toLocaleString("en-AU", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "Australia/Sydney",
+                  })}{" "}
+                  <span className="text-xs text-slate-500">(Australia/Sydney)</span>
+                </p>
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
-          {/* Execution Chart - shorter height */}
+        {/* Execution Chart - shorter height */}
+        {workflowPage !== undefined && (
           <section className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -468,8 +551,10 @@ function Runs() {
               </Card>
             )}
           </section>
+        )}
 
-          {/* Schedules section */}
+        {/* Schedules section */}
+        {schedulesPage !== undefined && (
           <section className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -520,8 +605,10 @@ function Runs() {
               </div>
             )}
           </section>
+        )}
 
-          {/* Execution Log with filters - at the bottom */}
+        {/* Execution Log with filters - at the bottom */}
+        {workflowPage !== undefined && (
           <section className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
@@ -549,20 +636,23 @@ function Runs() {
                       placeholder="Search by workflow, failed step, or error..."
                       value={searchQuery}
                       onChange={(e) =>
-                        transitionMachine({
-                          _tag: "SearchChanged",
-                          query: e.target.value,
-                        })
+                        send(RunsEvent.cases.SearchChanged.make({ query: e.target.value }))
                       }
                       className="flex-1 min-w-52"
                     />
                     <Select
                       value={statusFilter}
                       onValueChange={(value) =>
-                        transitionMachine({
-                          _tag: "StatusFilterSet",
-                          status: value as "all" | "succeeded" | "failed" | "running" | "cancelled",
-                        })
+                        send(
+                          RunsEvent.cases.StatusFilterSet.make({
+                            status: value as
+                              | "all"
+                              | "succeeded"
+                              | "failed"
+                              | "running"
+                              | "cancelled",
+                          }),
+                        )
                       }
                     >
                       <SelectTrigger className="w-fit">
@@ -585,12 +675,13 @@ function Runs() {
                       </label>
                       <Select
                         value={String(pageSize)}
-                        onValueChange={(value) => {
-                          setPageSize(Number(value));
-                          setCursorHistory([]);
-                          setCursor(null);
-                          refresh();
-                        }}
+                        onValueChange={(value) =>
+                          send(
+                            RunsEvent.cases.PageSizeChanged.make({
+                              pageSize: Number(value) as 10 | 25 | 50,
+                            }),
+                          )
+                        }
                       >
                         <SelectTrigger id="runs-page-size" className="w-20">
                           <SelectValue />
@@ -606,14 +697,15 @@ function Runs() {
                     <Select
                       value={sort}
                       onValueChange={(value) =>
-                        transitionMachine({
-                          _tag: "SortChanged",
-                          sort: value as
-                            | "startedAt-desc"
-                            | "startedAt-asc"
-                            | "duration-desc"
-                            | "duration-asc",
-                        })
+                        send(
+                          RunsEvent.cases.SortChanged.make({
+                            sort: value as
+                              | "startedAt-desc"
+                              | "startedAt-asc"
+                              | "duration-desc"
+                              | "duration-asc",
+                          }),
+                        )
                       }
                     >
                       <SelectTrigger className="w-fit">
@@ -633,11 +725,7 @@ function Runs() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() =>
-                          transitionMachine({
-                            _tag: "ResetFilters",
-                          })
-                        }
+                        onClick={() => send(RunsEvent.cases.ResetFilters.make({}))}
                         className="gap-1"
                       >
                         <IconX className="h-4 w-4" />
@@ -670,18 +758,34 @@ function Runs() {
                             <th className="px-3 py-2 text-left font-semibold text-slate-700">
                               Trigger
                             </th>
+                            <th className="px-3 py-2 text-left font-semibold text-slate-700">
+                              Progress
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredExecutions.length === 0 ? (
                             <tr>
-                              <td colSpan={4} className="px-3 py-4 text-center text-slate-500">
+                              <td colSpan={5} className="px-3 py-4 text-center text-slate-500">
                                 <p className="text-sm">No executions match your filters.</p>
                               </td>
                             </tr>
                           ) : (
                             filteredExecutions.map((execution) => (
-                              <ExecutionRow key={execution.id} execution={execution} />
+                              <ExecutionRow
+                                key={execution.id}
+                                execution={execution}
+                                expanded={
+                                  machineState?.expandedExecutionIds.includes(execution.id) ?? false
+                                }
+                                onToggle={() =>
+                                  send(
+                                    RunsEvent.cases.ExecutionRowToggled.make({
+                                      executionId: execution.id,
+                                    }),
+                                  )
+                                }
+                              />
                             ))
                           )}
                         </tbody>
@@ -696,7 +800,7 @@ function Runs() {
                     variant="outline"
                     size="sm"
                     onClick={handlePrev}
-                    disabled={cursorHistory.length === 0}
+                    disabled={(machineState?.cursorHistory.length ?? 0) === 0}
                   >
                     Previous
                   </Button>
@@ -710,8 +814,8 @@ function Runs() {
               </div>
             )}
           </section>
-        </>
-      )}
+        )}
+      </>
     </main>
   );
 }

@@ -1,15 +1,17 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
   "options": {
     "typeAware": true,
     "typeCheck": true
   },
+  "jsPlugins": ["./.cache/module-state.lint.js"],
   "rules": {
     "typescript/no-explicit-any": "error",
     "typescript/no-floating-promises": "error",
     "typescript/no-misused-promises": "error",
     "typescript/no-unused-vars": "error",
-    "no-unused-vars": "error"
+    "no-unused-vars": "error",
+    "browser-module-state/no-react-local-state": "error"
   },
   "ignorePatterns": ["node_modules/**"]
 }

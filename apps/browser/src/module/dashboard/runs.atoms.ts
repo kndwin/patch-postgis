@@ -1,23 +1,22 @@
 import { Atom } from "effect/unstable/reactivity";
-import { Effect } from "effect";
-import { httpClient } from "../../platform/http-client/client";
+import { Duration } from "effect";
+import { AppHttpClient } from "../../platform/http-client/client";
 
-// Current pagination cursor for the workflow execution list.
-export const workflowCursorAtom = Atom.make<string | null>(null);
-export const workflowPageSizeAtom = Atom.make(10);
+// Retain inactive page queries briefly so revisiting a page can reuse its result.
+const workflowQueryTtl = Duration.seconds(30);
+const schedulesQueryTtl = Duration.minutes(5);
 
-// Fetches workflows (for the current cursor) and schedules from the API.
-export const runsDataAtom = Atom.make((get) => {
-  const cursor = get(workflowCursorAtom);
-  const pageSize = get(workflowPageSizeAtom);
-  return httpClient.pipe(
-    Effect.flatMap((api) =>
-      Effect.all({
-        workflows: api.workflow.listWorkflows({
-          query: { limit: String(pageSize), ...(cursor ? { cursor } : {}) },
-        }),
-        schedules: api.workflow.listSchedules({ query: {} }),
-      }),
-    ),
-  );
+export const workflowQueryAtom = Atom.family(
+  ({ cursor, pageSize }: { readonly cursor: string | null; readonly pageSize: number }) =>
+    AppHttpClient.query("workflow", "listWorkflows", {
+      query: { limit: String(pageSize), ...(cursor ? { cursor } : {}) },
+      reactivityKeys: ["workflow", "executions"],
+      timeToLive: workflowQueryTtl,
+    }),
+);
+
+export const schedulesQueryAtom = AppHttpClient.query("workflow", "listSchedules", {
+  query: {},
+  reactivityKeys: ["workflow", "schedules"],
+  timeToLive: schedulesQueryTtl,
 });
