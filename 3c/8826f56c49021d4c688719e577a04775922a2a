@@ -1,0 +1,16 @@
+apps/server/src/module/cadastre/workflow/activity/build-pmtiles.activity.test.ts
+  h_ba3efde196eb39 2,5,7-8,14-16
+apps/server/src/module/cadastre/workflow/activity/build-pmtiles.activity.ts
+  h_ba3efde196eb39 78-80,92-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "3c8826f56c49021d4c688719e577a04775922a2a",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
