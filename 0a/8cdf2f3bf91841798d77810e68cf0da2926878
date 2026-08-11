@@ -1,0 +1,20 @@
+apps/server/src/module/cadastre/workflow/activity/build-pmtiles.activity.test.ts
+  h_ba3efde196eb39 2-18,21-58
+apps/server/src/module/cadastre/workflow/activity/build-pmtiles.activity.ts
+  h_ba3efde196eb39 42-74,275,280-314
+apps/server/src/platform/cadastre/pmtiles.boundary.test.ts
+  h_ba3efde196eb39 31,37,40-44
+apps/server/src/platform/cadastre/pmtiles.boundary.ts
+  h_ba3efde196eb39 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "0a8cdf2f3bf91841798d77810e68cf0da2926878",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
