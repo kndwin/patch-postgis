@@ -12,13 +12,13 @@ RUN git clone --depth 1 --branch v1.30.3 https://github.com/protomaps/go-pmtiles
 
 FROM oven/bun:1.3.14
 
-RUN apt-get update && apt-get install -y --no-install-recommends gdal-bin unzip && \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates gdal-bin unzip && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=tippecanoe-tool /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
 COPY --from=pmtiles-tool /usr/local/bin/pmtiles /usr/local/bin/pmtiles
-RUN tippecanoe --version && pmtiles --help >/dev/null && unzip -v >/dev/null
+RUN test -r /etc/ssl/certs/ca-certificates.crt && tippecanoe --version && pmtiles --help >/dev/null && unzip -v >/dev/null
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/server/package.json apps/server/package.json
