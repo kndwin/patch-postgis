@@ -1,0 +1,18 @@
+apps/server/src/module/cadastre/workflow/cadastre-workflow-logging.service.test.ts
+  h_ba3efde196eb39 1-25
+apps/server/src/module/cadastre/workflow/cadastre-workflow-logging.service.ts
+  h_ba3efde196eb39 1-26
+apps/server/src/module/cadastre/workflow/cadastre-workflow.http-api.live.ts
+  h_ba3efde196eb39 9,135-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ba8a90839533735911d8ee664a2113558e19c718",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
