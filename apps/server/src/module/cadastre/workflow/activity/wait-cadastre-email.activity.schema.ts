@@ -1,11 +1,11 @@
 import { Schema } from "effect";
 
-export class CadastreEmailTimeoutError extends Schema.TaggedErrorClass<CadastreEmailTimeoutError>()(
+export class CadastreEmailTimeoutError extends Schema.TaggedError<CadastreEmailTimeoutError>()(
   "CadastreEmailTimeoutError",
   { message: Schema.String, attempts: Schema.Number },
 ) {}
 
-export class CadastreEmailLookupError extends Schema.TaggedErrorClass<CadastreEmailLookupError>()(
+export class CadastreEmailLookupError extends Schema.TaggedError<CadastreEmailLookupError>()(
   "CadastreEmailLookupError",
   { message: Schema.String },
 ) {}

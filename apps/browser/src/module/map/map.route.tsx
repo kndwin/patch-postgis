@@ -1,11 +1,17 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import { createFileRoute } from "@tanstack/react-router";
+import { Option } from "effect";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
 import type { Snapshot, SyncRun } from "@patch/http-contract";
 import { initialSyncState, type SyncState } from "./map.machine";
-import { cadastreMachineAtom } from "./cadastre.machine";
+import {
+  cadastreFailureAtom,
+  cadastreLoadedAtom,
+  cadastreLoadingAtom,
+  cadastreMachineAtom,
+} from "./cadastre.machine";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -124,17 +130,28 @@ function SyncAttempt({ run }: { run: SyncRun }) {
 }
 
 export function CadastrePage() {
-  const result = useAtomValue(cadastreMachineAtom.result);
+  const loadingResult = useAtomValue(cadastreLoadingAtom);
+  const loadedResult = useAtomValue(cadastreLoadedAtom);
+  const failureResult = useAtomValue(cadastreFailureAtom);
   const send = useAtomSet(cadastreMachineAtom.send);
-  const state = AsyncResult.isSuccess(result) ? result.value.value : null;
-  const loading = state?._tag === "Loading" || state === null;
-  const error = AsyncResult.isFailure(result)
-    ? "Status unavailable"
-    : state?._tag === "Failure"
-      ? state.message
-      : undefined;
-  const snapshot = state?._tag === "Loaded" ? (state.snapshot as Snapshot | null) : null;
-  const runs = state?._tag === "Loaded" ? (state.runs as readonly SyncRun[]) : [];
+  const loaded = AsyncResult.isSuccess(loadedResult)
+    ? Option.getOrUndefined(loadedResult.value)
+    : undefined;
+  const failure = AsyncResult.isSuccess(failureResult)
+    ? Option.getOrUndefined(failureResult.value)
+    : undefined;
+  const loading =
+    loadingResult.waiting || (AsyncResult.isSuccess(loadingResult) && loadingResult.value);
+  const error =
+    AsyncResult.isFailure(loadingResult) ||
+    AsyncResult.isFailure(loadedResult) ||
+    AsyncResult.isFailure(failureResult)
+      ? "Status unavailable"
+      : failure
+        ? failure.message
+        : undefined;
+  const snapshot = loaded ? (loaded.snapshot as Snapshot | null) : null;
+  const runs = loaded ? (loaded.runs as readonly SyncRun[]) : [];
   const latest = runs[0];
   const sync: SyncState = latest
     ? {

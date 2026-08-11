@@ -113,3 +113,4 @@ export const runsMachine = Machine.make({
 });
 
 export const runsMachineAtom = AtomMachine.make(runsMachine);
+export const runsReadyAtom = AtomMachine.select(runsMachineAtom, "Ready");

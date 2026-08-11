@@ -16,11 +16,11 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@effect/platform-bun": "4.0.0-beta.102",
-    "@effect/sql-pg": "4.0.0-beta.102",
+    "@effect/platform-bun": "4.0.0-beta.107",
+    "@effect/sql-pg": "4.0.0-beta.107",
     "@patch/http-contract": "workspace:*",
-    "drizzle-orm": "1.0.0-rc.4",
-    "effect": "4.0.0-beta.102",
+    "drizzle-orm": "1.0.0-rc.5-ab785fc",
+    "effect": "4.0.0-beta.107",
     "effect-cf": "0.17.1",
     "pg": "8.22.0",
     "postal-mime": "^2.7.5"
@@ -29,7 +29,7 @@
     "@cloudflare/workers-types": "5.20260801.1",
     "@types/bun": "latest",
     "@types/pg": "8.21.0",
-    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "effect-oxlint": "^0.2.0",
     "oxlint": "^1.60.0",
     "oxlint-tsgolint": "^0.21.0",

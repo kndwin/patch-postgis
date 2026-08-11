@@ -5,7 +5,7 @@ import { cadastreLots } from "./lot.model";
 // the HTTP DTO, but remains part of the model schema for other consumers.
 export const CadastreLotSchema = createSelectSchema(cadastreLots);
 import { Schema } from "effect";
-export class LotNotFoundError extends Schema.TaggedErrorClass<LotNotFoundError>()(
-  "LotNotFoundError",
-  { id: Schema.String, message: Schema.String },
-) {}
+export class LotNotFoundError extends Schema.TaggedError<LotNotFoundError>()("LotNotFoundError", {
+  id: Schema.String,
+  message: Schema.String,
+}) {}

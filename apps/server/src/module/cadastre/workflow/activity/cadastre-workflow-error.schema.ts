@@ -1,44 +1,44 @@
 import { Schema } from "effect";
 
-export class CadastreWorkflowConfigError extends Schema.TaggedErrorClass<CadastreWorkflowConfigError>()(
+export class CadastreWorkflowConfigError extends Schema.TaggedError<CadastreWorkflowConfigError>()(
   "CadastreWorkflowConfigError",
   { message: Schema.String },
 ) {}
 
-export class CadastreWorkflowHttpError extends Schema.TaggedErrorClass<CadastreWorkflowHttpError>()(
+export class CadastreWorkflowHttpError extends Schema.TaggedError<CadastreWorkflowHttpError>()(
   "CadastreWorkflowHttpError",
   { message: Schema.String },
 ) {}
 
-export class CadastreWorkflowDatabaseError extends Schema.TaggedErrorClass<CadastreWorkflowDatabaseError>()(
+export class CadastreWorkflowDatabaseError extends Schema.TaggedError<CadastreWorkflowDatabaseError>()(
   "CadastreWorkflowDatabaseError",
   { message: Schema.String },
 ) {}
 
-export class CadastreWorkflowJsonError extends Schema.TaggedErrorClass<CadastreWorkflowJsonError>()(
+export class CadastreWorkflowJsonError extends Schema.TaggedError<CadastreWorkflowJsonError>()(
   "CadastreWorkflowJsonError",
   { message: Schema.String },
 ) {}
 
-export class CadastreWorkflowProviderError extends Schema.TaggedErrorClass<CadastreWorkflowProviderError>()(
+export class CadastreWorkflowProviderError extends Schema.TaggedError<CadastreWorkflowProviderError>()(
   "CadastreWorkflowProviderError",
   { message: Schema.String, status: Schema.Number, response: Schema.Unknown },
 ) {}
 
-export class CadastreWorkflowNotImplemented extends Schema.TaggedErrorClass<CadastreWorkflowNotImplemented>()(
+export class CadastreWorkflowNotImplemented extends Schema.TaggedError<CadastreWorkflowNotImplemented>()(
   "CadastreWorkflowNotImplemented",
   { activity: Schema.String, message: Schema.String },
 ) {}
 
-export class CadastreDownloadLinkError extends Schema.TaggedErrorClass<CadastreDownloadLinkError>()(
+export class CadastreDownloadLinkError extends Schema.TaggedError<CadastreDownloadLinkError>()(
   "CadastreDownloadLinkError",
   { message: Schema.String },
 ) {}
-export class CadastreWorkflowPostgisError extends Schema.TaggedErrorClass<CadastreWorkflowPostgisError>()(
+export class CadastreWorkflowPostgisError extends Schema.TaggedError<CadastreWorkflowPostgisError>()(
   "CadastreWorkflowPostgisError",
   { message: Schema.String },
 ) {}
-export class CadastreWorkflowPmtilesError extends Schema.TaggedErrorClass<CadastreWorkflowPmtilesError>()(
+export class CadastreWorkflowPmtilesError extends Schema.TaggedError<CadastreWorkflowPmtilesError>()(
   "CadastreWorkflowPmtilesError",
   { message: Schema.String },
 ) {}

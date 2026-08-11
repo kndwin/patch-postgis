@@ -11,16 +11,16 @@ import { cadastreSnapshots, cadastreSyncRuns } from "./cadastre-sync.model";
 // Errors
 // ---------------------------------------------------------------------------
 
-export class SyncError extends Schema.TaggedErrorClass<SyncError>()("SyncError", {
+export class SyncError extends Schema.TaggedError<SyncError>()("SyncError", {
   message: Schema.String,
 }) {}
 
-export class SourceNotFoundError extends Schema.TaggedErrorClass<SourceNotFoundError>()(
+export class SourceNotFoundError extends Schema.TaggedError<SourceNotFoundError>()(
   "SourceNotFoundError",
   { message: Schema.String },
 ) {}
 
-export class SyncAlreadyRunningError extends Schema.TaggedErrorClass<SyncAlreadyRunningError>()(
+export class SyncAlreadyRunningError extends Schema.TaggedError<SyncAlreadyRunningError>()(
   "SyncAlreadyRunningError",
   { message: Schema.String },
 ) {}

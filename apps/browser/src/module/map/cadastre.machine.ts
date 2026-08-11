@@ -56,3 +56,6 @@ export const cadastreMachine = Machine.make({
 });
 
 export const cadastreMachineAtom = AtomMachine.make(cadastreMachine);
+export const cadastreLoadingAtom = AtomMachine.matches(cadastreMachineAtom, "Loading");
+export const cadastreLoadedAtom = AtomMachine.select(cadastreMachineAtom, "Loaded");
+export const cadastreFailureAtom = AtomMachine.select(cadastreMachineAtom, "Failure");

@@ -8,7 +8,7 @@ export type ExportRequestClaim =
   | { readonly claimed: true; readonly request: CadastreExportRequest }
   | { readonly claimed: false; readonly request: CadastreExportRequest };
 
-export class ExportRequestClaimError extends Schema.TaggedErrorClass<ExportRequestClaimError>()(
+export class ExportRequestClaimError extends Schema.TaggedError<ExportRequestClaimError>()(
   "ExportRequestClaimError",
   { message: Schema.String },
 ) {}

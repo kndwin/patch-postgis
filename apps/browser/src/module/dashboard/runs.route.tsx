@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { useEffect, useMemo } from "react";
 import { IconChevronDown, IconChevronRight, IconX } from "@tabler/icons-react";
-import { RunsEvent, runsMachineAtom } from "./runs-filter.machine";
+import { RunsEvent, runsMachineAtom, runsReadyAtom } from "./runs-filter.machine";
 import { formatRunDate, parseRunDate } from "./runs-dates";
 import { Spinner } from "@/components/ui/spinner";
 import { Progress } from "@/components/ui/progress";
@@ -255,9 +255,11 @@ function ExecutionRow({
 }
 
 function Runs() {
-  const machineResult = useAtomValue(runsMachineAtom.result);
+  const machineResult = useAtomValue(runsReadyAtom);
   const send = useAtomSet(runsMachineAtom.send);
-  const machineState = AsyncResult.isSuccess(machineResult) ? machineResult.value.value : null;
+  const machineState = AsyncResult.isSuccess(machineResult)
+    ? Option.getOrNull(machineResult.value)
+    : null;
   const cursor = machineState?.cursor ?? null;
   const pageSize = machineState?.pageSize ?? 10;
   const workflowQuery = useMemo(() => workflowQueryAtom({ cursor, pageSize }), [cursor, pageSize]);
