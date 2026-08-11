@@ -1,0 +1,40 @@
+apps/browser/package.json
+  h_ba3efde196eb39 24,31,36
+apps/browser/src/module/dashboard/runs-filter.machine.ts
+  h_ba3efde196eb39 116
+apps/browser/src/module/dashboard/runs.route.tsx
+  h_ba3efde196eb39 31,258,260-262
+apps/browser/src/module/map/cadastre.machine.ts
+  h_ba3efde196eb39 59-61
+apps/browser/src/module/map/map.route.tsx
+  h_ba3efde196eb39 4,9-14,133-135,137-154
+apps/server/package.json
+  h_ba3efde196eb39 19-20,22-23,32
+apps/server/src/module/cadastre/lot/lot.schema.ts
+  h_ba3efde196eb39 8-11
+apps/server/src/module/cadastre/sync/cadastre-sync.service.ts
+  h_ba3efde196eb39 14,18,23
+apps/server/src/module/cadastre/workflow/activity/cadastre-workflow-error.schema.ts
+  h_ba3efde196eb39 3,8,13,18,23,28,33,37,41
+apps/server/src/module/cadastre/workflow/activity/request-dataset-api.repo.ts
+  h_ba3efde196eb39 11
+apps/server/src/module/cadastre/workflow/activity/wait-cadastre-email.activity.schema.ts
+  h_ba3efde196eb39 3,8
+package.json
+  h_ba3efde196eb39 29,31
+packages/http-contract/package.json
+  h_ba3efde196eb39 9
+pnpm-lock.yaml
+  h_ba3efde196eb39 19-20,23,25-26,40-41,61-62,76-77,135,158-159,161-162,167-168,170-171,174,192-193,196,213-214,649-650,652-654,656-657,659,661-662,665,667-668,671-672,679-680,682,2253-2254,2257,2972-2975,3122-3270,3294-3295,5708,5714,5719,5722,5724-5725,5738,5741-5742,5745-5746,5748,5750,5752-5753,5756-5757,5762,5764-5765,5767,5769,5771,5773-5774,5776,5778-5779,5804,5806,5810,5812-5813,5818,5821,5827,5829-5830,5838,5841,5843,5845,5854,5856,5858,5860,7021,7023,7283,7288-7290,7292-7298,7310,7326-7328,7330,7683-7691,7693,7696-7698,7703,7705,7708,7710,7713-7715,7720,7722,7734,7736-7738,7740,7742,7745,7747
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "68fb408bfa9cd8e5c6ea2fc512d01b1adcd29ff0",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
