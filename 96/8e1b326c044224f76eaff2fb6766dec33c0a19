@@ -1,0 +1,16 @@
+apps/server/src/module/cadastre/sync/cadastre-sync.service.ts
+  h_ba3efde196eb39 231-233
+apps/server/src/module/cadastre/sync/cadastre-sync.test.ts
+  h_ba3efde196eb39 157-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "968e1b326c044224f76eaff2fb6766dec33c0a19",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
