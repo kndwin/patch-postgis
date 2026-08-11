@@ -6,6 +6,7 @@ import { WorkflowProjection } from "./cadastre-workflow.service";
 import { CadastreSyncWorkflow } from "./cadastre-workflow.workflow";
 import { WorkflowProjectionRepo, WorkflowProjectionRepoLive } from "./cadastre-workflow.repo";
 import { normalizeArtifactEtag } from "../../../platform/cloudflare/artifact/artifact.boundary";
+import { safeWorkflowExecuteCause } from "./cadastre-workflow-logging.service";
 
 const boundedLimit = (value: string | undefined) =>
   Math.min(100, Math.max(1, Number(value ?? 25) || 25));
@@ -131,7 +132,18 @@ const WorkflowHandlersLive = HttpApiBuilder.group(AppApi, "workflow", (handlers)
             retryAttempt,
           },
           { discard: true },
-        ).pipe(Effect.catchCause(() => Effect.fail(new HttpApiError.InternalServerError())));
+        ).pipe(
+          Effect.catchCause((cause) =>
+            Effect.logError("cadastre recovery workflow dispatch failed").pipe(
+              Effect.annotateLogs({
+                ...safeWorkflowExecuteCause(cause),
+                "workflow.parent_execution_id": params.executionId,
+                "workflow.retry_attempt": retryAttempt,
+              }),
+              Effect.andThen(Effect.fail(new HttpApiError.InternalServerError())),
+            ),
+          ),
+        );
         return { executionId: child, parentExecutionId: params.executionId, status: "running" };
       }),
     )
