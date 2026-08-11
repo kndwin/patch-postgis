@@ -1,0 +1,14 @@
+apps/server/Dockerfile
+  h_ba3efde196eb39 15,21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4bb43d44b14fb2e1efd2ca5c2709a341ba411f6f",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
