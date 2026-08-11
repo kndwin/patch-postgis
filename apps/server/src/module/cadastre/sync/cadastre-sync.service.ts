@@ -234,6 +234,7 @@ export function buildOgr2OgrArgs(
     "-nln",
     stagingTable,
     "-append",
+    "-makevalid",
     "-nlt",
     "PROMOTE_TO_MULTI",
     "-s_srs",

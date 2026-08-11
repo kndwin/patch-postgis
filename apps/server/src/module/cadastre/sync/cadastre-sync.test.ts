@@ -237,14 +237,28 @@ describe("buildOgr2OgrArgs", () => {
     expect(args[tIdx + 1]).toBe("EPSG:4326");
   });
 
-  test("promotes geometries to multi-type and sets geometry column name", () => {
+  test("repairs geometries before promoting them to multi-type", () => {
     const args = buildOgr2OgrArgs(
       "/tmp/x.gdb",
       "host=h port=5432 dbname=d user=u",
       "cadastre_lots_staging_test",
     );
-    expect(args).toContain("-nlt");
-    expect(args).toContain("PROMOTE_TO_MULTI");
+
+    const makeValidIndex = args.indexOf("-makevalid");
+    expect(args.slice(makeValidIndex, makeValidIndex + 3)).toEqual([
+      "-makevalid",
+      "-nlt",
+      "PROMOTE_TO_MULTI",
+    ]);
+  });
+
+  test("sets the geometry column name", () => {
+    const args = buildOgr2OgrArgs(
+      "/tmp/x.gdb",
+      "host=h port=5432 dbname=d user=u",
+      "cadastre_lots_staging_test",
+    );
+
     expect(args).toContain("-lco");
     expect(args).toContain("GEOMETRY_NAME=geometry");
   });

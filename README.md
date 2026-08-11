@@ -199,7 +199,8 @@ Each sync run follows these steps:
 3. Run `ogr2ogr` against the `Lot` layer, appending rows into the pre-created
    staging table. The layer query renames `cadid` → `id` and
    `lotidstring` → `lot_number`, reprojects from EPSG:7844 to EPSG:4326,
-   and promotes single polygons to MultiPolygon.
+   repairs invalid geometries with GDAL's `-makevalid`, and promotes resulting
+   polygons to MultiPolygon to preserve the staging column contract.
 4. Build a GiST spatial index on the staging geometry column.
 5. Count the imported rows. An empty snapshot is rejected; the typed
    staging DDL already constrains every geometry to `MultiPolygon,4326`.
