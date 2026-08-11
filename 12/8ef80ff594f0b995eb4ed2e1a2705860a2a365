@@ -1,0 +1,46 @@
+apps/server/src/module/cadastre/workflow/activity/activity-options.activity.ts
+  h_ba3efde196eb39 1-7
+apps/server/src/module/cadastre/workflow/activity/build-pmtiles.activity.ts
+  h_ba3efde196eb39 7,227
+apps/server/src/module/cadastre/workflow/activity/download-gdb.activity.ts
+  h_ba3efde196eb39 6,179
+apps/server/src/module/cadastre/workflow/activity/extract-download-link.activity.test.ts
+  h_ba3efde196eb39 3,5
+apps/server/src/module/cadastre/workflow/activity/extract-download-link.activity.ts
+  h_ba3efde196eb39 4,12-21,23-50,52,54-55,59
+apps/server/src/module/cadastre/workflow/activity/import-postgis.activity.ts
+  h_ba3efde196eb39 4,61
+apps/server/src/module/cadastre/workflow/activity/request-dataset-api.activity.ts
+  h_ba3efde196eb39 6,145
+apps/server/src/module/cadastre/workflow/activity/upload.activity.ts
+  h_ba3efde196eb39 4,20
+apps/server/src/module/cadastre/workflow/activity/validate-promote.activity.ts
+  h_ba3efde196eb39 4,15
+apps/server/src/module/cadastre/workflow/activity/verify-publish.activity.ts
+  h_ba3efde196eb39 4,47
+apps/server/src/module/cadastre/workflow/activity/wait-cadastre-email.activity.test.ts
+  h_ba3efde196eb39 6,10,32-38,47,61,71,125
+apps/server/src/module/cadastre/workflow/activity/wait-cadastre-email.activity.ts
+  h_ba3efde196eb39 2,23,41
+apps/server/src/module/cadastre/workflow/cadastre-workflow.repo.test.ts
+  h_ba3efde196eb39 2,7,37-47
+apps/server/src/module/cadastre/workflow/cadastre-workflow.repo.ts
+  h_ba3efde196eb39 25-36,142,307-334
+apps/server/src/module/cadastre/workflow/cadastre-workflow.workflow.ts
+  h_ba3efde196eb39 18,148,156
+apps/server/src/module/cadastre/workflow/workflow-projection.activity.test.ts
+  h_ba3efde196eb39 1-55
+apps/server/src/module/cadastre/workflow/workflow-projection.activity.ts
+  h_ba3efde196eb39 1,8,19,21-22,66-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "128ef80ff594f0b995eb4ed2e1a2705860a2a365",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
