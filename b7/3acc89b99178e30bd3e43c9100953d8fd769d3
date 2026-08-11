@@ -1,0 +1,19 @@
+apps/server/.env.example
+  s_bcbd6d7bb84665::t_5cce3d5a86a599 10-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b73acc89b99178e30bd3e43c9100953d8fd769d3",
+  "prompts": {},
+  "sessions": {
+    "s_bcbd6d7bb84665": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "cc3473a7-8f56-4724-aa52-c03f0723919d",
+        "model": "grok-4.5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
