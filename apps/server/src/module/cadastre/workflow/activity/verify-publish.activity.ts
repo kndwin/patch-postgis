@@ -21,6 +21,7 @@ import {
 } from "../../../../platform/cadastre/pmtiles.boundary";
 import { cadastreSnapshots } from "../../sync/cadastre-sync.model";
 import { CadastreWorkflowPmtilesError } from "./cadastre-workflow-error.schema";
+import { observePublication } from "../../../../platform/observability/cadastre.metrics";
 
 const inspect = async (args: string[]) => {
   const process = Bun.spawn(args, { stdout: "pipe", stderr: "pipe" });
@@ -169,6 +170,7 @@ export const VerifyPublishActivity = (input: typeof VerifyPublishInputSchema.Typ
             ? error
             : new CadastreWorkflowPmtilesError({ message: "PMTiles verification failed" }),
         ),
+        observePublication,
       ),
     ),
   });

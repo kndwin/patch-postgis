@@ -1,4 +1,4 @@
-import { Cause, DateTime, Effect, Layer, Schema } from "effect";
+import { Cause, Clock, DateTime, Duration, Effect, Layer, Schema } from "effect";
 import { Workflow } from "effect/unstable/workflow";
 import {
   BuildPmtilesActivity,
@@ -17,6 +17,11 @@ import {
   WorkflowProjectionRepoLive,
   safeActivityError,
 } from "./cadastre-workflow.repo";
+import {
+  recordWorkflowCompleted,
+  recordWorkflowStarted,
+  workflowOutcome,
+} from "../../../platform/observability/cadastre.metrics";
 
 export { ActivityNames, CadastreWorkflowNotImplemented } from "./activity";
 export type { ActivityName } from "./activity";
@@ -153,7 +158,21 @@ const runCadastreSyncWorkflow = Effect.fn("CadastreSyncWorkflow.run")(function* 
       ...input.source,
       createdAt: DateTime.toDate(startedAt),
     });
+  const metricStartedAt = yield* Clock.currentTimeNanos;
+  yield* recordWorkflowStarted(input.trigger);
   const steps = yield* runCadastreSyncPipeline(input).pipe(
+    Effect.withSpan("cadastre.workflow.pipeline", {
+      attributes: {
+        "workflow.name": "CadastreSyncWorkflow",
+        "workflow.trigger": input.trigger,
+        "workflow.recovery": input.trigger === "recovery",
+      },
+    }),
+    Effect.annotateLogs({
+      "workflow.name": "CadastreSyncWorkflow",
+      "workflow.trigger": input.trigger,
+      "workflow.recovery": input.trigger === "recovery",
+    }),
     Effect.matchCauseEffect({
       onSuccess: (value) =>
         Effect.fn("CadastreSyncWorkflow.succeed")(function* () {
@@ -186,6 +205,15 @@ const runCadastreSyncWorkflow = Effect.fn("CadastreSyncWorkflow.run")(function* 
               return yield* Effect.failCause(cause);
             })(),
     }),
+    Effect.onExit((exit) =>
+      Effect.fn("CadastreSyncWorkflow.metrics.complete")(function* () {
+        const metricFinishedAt = yield* Clock.currentTimeNanos;
+        yield* recordWorkflowCompleted(
+          workflowOutcome(exit),
+          Duration.nanos(metricFinishedAt - metricStartedAt),
+        );
+      })(),
+    ),
   );
   return steps;
 });

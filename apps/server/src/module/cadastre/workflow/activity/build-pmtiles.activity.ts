@@ -1,7 +1,7 @@
 import { mkdtemp, rm, statfs, stat, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
-import { Effect, Config, Semaphore } from "effect";
+import { Clock, Config, Duration, Effect, Semaphore } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
 import {
@@ -21,6 +21,7 @@ import {
   normalizeEtag,
   normalizeTileBaseUrl,
 } from "../../../../platform/cadastre/pmtiles.boundary";
+import { recordPmtilesBuilt } from "../../../../platform/observability/cadastre.metrics";
 
 const PART_SIZE = 64 * 1024 * 1024;
 const MIN_FREE = 20 * 1024 * 1024 * 1024;
@@ -228,6 +229,7 @@ export const BuildPmtilesActivity = (input: typeof BuildPmtilesInputSchema.Type)
     execute: projectActivity(
       "build-pmtiles",
       Effect.fn("CadastreSyncWorkflow.buildPmtiles.execute")(function* () {
+        const buildStartedAt = yield* Clock.currentTimeNanos;
         const work = yield* Config.string("CADASTRE_WORK_DIR").pipe(
           Config.withDefault("/tmp"),
           Effect.mapError(() => configFail("Invalid work directory configuration")),
@@ -281,6 +283,8 @@ export const BuildPmtilesActivity = (input: typeof BuildPmtilesInputSchema.Type)
           const etag = yield* Effect.promise(() =>
             upload(normalizedTileUrl, token, key, pmtiles, info.size, input.runHash, checksum),
           );
+          const buildFinishedAt = yield* Clock.currentTimeNanos;
+          yield* recordPmtilesBuilt(Duration.nanos(buildFinishedAt - buildStartedAt), info.size);
           return {
             source: input.source,
             runHash: input.runHash,

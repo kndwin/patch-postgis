@@ -14,6 +14,7 @@ import {
   CadastreWorkflowHttpError,
   CadastreWorkflowPostgisError,
 } from "./cadastre-workflow-error.schema";
+import { recordImportedLots } from "../../../../platform/observability/cadastre.metrics";
 
 export function fileGdbRoot(entries: readonly string[]): string {
   if (entries.length === 0) throw new Error("Archive is empty");
@@ -190,9 +191,11 @@ export const ImportPostgisActivity = (input: typeof ImportPostgisInputSchema.Typ
             ),
           );
           const service = yield* CadastreSyncService;
-          return yield* service
+          const imported = yield* service
             .importToStaging(gdalPath, runHash, input.source)
             .pipe(Effect.mapError((e) => new CadastreWorkflowPostgisError({ message: e.message })));
+          yield* recordImportedLots(imported.lotCount);
+          return imported;
         })().pipe(
           Effect.ensuring(
             Effect.promise(() => rm(dir, { recursive: true, force: true })).pipe(

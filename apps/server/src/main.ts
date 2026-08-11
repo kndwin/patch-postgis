@@ -1,6 +1,6 @@
 import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
 import { Config, Effect, Layer } from "effect";
-import { HttpRouter } from "effect/unstable/http";
+import { HttpMiddleware, HttpRouter } from "effect/unstable/http";
 import { ApiLive } from "./platform/http/api.live";
 import { CorsLive } from "./platform/http/cors";
 import { CadastreService } from "./module/cadastre/lot/lot.service";
@@ -9,12 +9,15 @@ import { CadastreStatusService } from "./module/cadastre/sync/cadastre-sync-stat
 import { WorkflowProjectionLive } from "./module/cadastre/workflow/cadastre-workflow.service";
 import { CadastreEmailIngestionServiceLive } from "./module/cadastre/workflow/cadastre-email-ingestion.service";
 import { CadastreWorkflowRuntimeLive } from "./module/cadastre/workflow/cadastre-workflow.runtime.live";
+import { ObservabilityLive } from "./platform/observability/observability.live";
 
 const ServerLive = Layer.unwrap(
   Effect.fn("ServerLive")(function* () {
     const port = yield* Config.number("PORT").pipe(Config.withDefault(3000));
 
-    return HttpRouter.serve(Layer.merge(ApiLive, CorsLive)).pipe(
+    return HttpRouter.serve(Layer.merge(ApiLive, CorsLive), {
+      middleware: HttpMiddleware.tracer,
+    }).pipe(
       Layer.provide(BunHttpServer.layer({ port })),
       Layer.provide(
         Layer.merge(
@@ -31,9 +34,7 @@ const ServerLive = Layer.unwrap(
 );
 
 BunRuntime.runMain(
-  Layer.launch(ServerLive).pipe(Effect.provide(CadastreWorkflowRuntimeLive)) as Effect.Effect<
-    never,
-    unknown,
-    never
-  >,
+  Layer.launch(Layer.merge(ServerLive, CadastreWorkflowRuntimeLive)).pipe(
+    Effect.provide(ObservabilityLive),
+  ) as Effect.Effect<never, unknown, never>,
 );

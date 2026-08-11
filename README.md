@@ -101,6 +101,31 @@ pnpm check
 pnpm format
 ```
 
+## Observability
+
+The server writes one structured JSON object per log event to stdout in all
+environments. This is the production/container log source. Logs are also kept as
+events on their active Effect trace span; OTLP log export is intentionally not
+configured.
+
+OTLP/HTTP protobuf traces and metrics are optional. They are disabled cleanly
+when no exporter configuration is present. To opt in, configure a collector at
+runtime (no endpoint or credentials are stored in infrastructure):
+
+```sh
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_TRACES_EXPORTER=otlp
+OTEL_METRICS_EXPORTER=otlp
+# Optional: OTEL_EXPORTER_OTLP_HEADERS=authorization=Bearer%20token
+```
+
+Signal-specific `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and
+`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` values are also supported. HTTP requests
+create server spans with incoming trace-context propagation. Initial cadastre
+metrics cover bounded trigger/outcome dimensions, workflow and PMTiles build
+duration, imported lot count, PMTiles size, and publication outcome; identifiers,
+URLs, object keys, and errors are never metric attributes.
+
 ## Cadastre sync
 
 ### Browser status modes
@@ -169,7 +194,7 @@ Each sync run follows these steps:
 
 1. Clean up any stale staging table from a previous failed run.
 2. Create the `cadastre_lots_staging` table with the exact DDL contract
-    (`id text PRIMARY KEY`, `lot_number text NOT NULL`,
+   (`id text PRIMARY KEY`, `lot_number text NOT NULL`,
    `geometry geometry(MultiPolygon,4326)`).
 3. Run `ogr2ogr` against the `Lot` layer, appending rows into the pre-created
    staging table. The layer query renames `cadid` → `id` and
