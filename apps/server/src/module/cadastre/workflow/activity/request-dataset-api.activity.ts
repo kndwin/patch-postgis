@@ -3,6 +3,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/
 import { Activity } from "effect/unstable/workflow";
 import { WorkflowEngine } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import { CadastreExportRequestRepo, exportRequestShouldSend } from "./request-dataset-api.repo";
 import {
   CadastreActivityErrorSchema,
@@ -141,6 +142,7 @@ export const RequestDatasetApiEffect = Effect.fn("RequestDatasetApi")(function* 
 
 /** Requests the provider to queue the configured Lot FileGDB export. */
 export const RequestDatasetApiActivity = Activity.make({
+  interruptRetryPolicy: activityInterruptRetryPolicy,
   name: "CadastreSyncWorkflow/request-dataset-api",
   success: DatasetExportMetadataSchema,
   error: CadastreActivityErrorSchema,

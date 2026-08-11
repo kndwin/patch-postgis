@@ -15,6 +15,7 @@ import { CadastreEmailIngestionServiceLive } from "./cadastre-email-ingestion.se
 import {
   WorkflowProjectionRepo,
   WorkflowProjectionRepoLive,
+  requireRunningExecution,
   safeActivityError,
 } from "./cadastre-workflow.repo";
 import {
@@ -144,7 +145,7 @@ const runCadastreSyncWorkflow = Effect.fn("CadastreSyncWorkflow.run")(function* 
   const repo = yield* WorkflowProjectionRepo;
   yield* validateInput(input);
   const startedAt = yield* DateTime.now;
-  yield* repo.startWorkflow({
+  const execution = yield* repo.startWorkflow({
     id: executionId,
     trigger: input.trigger,
     idempotencyKey: input.idempotencyKey,
@@ -152,6 +153,7 @@ const runCadastreSyncWorkflow = Effect.fn("CadastreSyncWorkflow.run")(function* 
     parentExecutionId: input.parentExecutionId,
     retryAttempt: input.retryAttempt,
   });
+  yield* requireRunningExecution(executionId, execution);
   if (input.source)
     yield* repo.saveSourceArtifact({
       executionId,

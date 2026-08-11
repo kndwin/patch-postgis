@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { Config, DateTime, Effect } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import { WorkflowEngine } from "effect/unstable/workflow";
 import { WorkflowProjectionRepo } from "../cadastre-workflow.repo";
 import { isTrustedCadastreDownloadUrl } from "../../../../platform/cloudflare/artifact/artifact.boundary";
@@ -175,6 +176,7 @@ const download = async (url: string, file: string, expectedSize: number) => {
 
 export const DownloadGdbActivity = (input: DownloadGdbInput) =>
   Activity.make({
+    interruptRetryPolicy: activityInterruptRetryPolicy,
     name: "CadastreSyncWorkflow/download-gdb",
     error: CadastreActivityErrorSchema,
     success: DownloadGdbSuccessSchema,

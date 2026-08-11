@@ -1,15 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { Effect } from "effect";
-import { ExtractDownloadLinkActivity } from "./extract-download-link.activity";
+import { extractDownloadLink } from "./extract-download-link.activity";
 
-const run = (parsedEmail: unknown) =>
-  Effect.runPromise(
-    ExtractDownloadLinkActivity({ parsedEmail }).execute as unknown as Effect.Effect<
-      string,
-      unknown,
-      never
-    >,
-  );
+const run = (parsedEmail: unknown) => Effect.runPromise(extractDownloadLink({ parsedEmail }));
 
 describe("extract-download-link activity", () => {
   test("extracts a decoded URL from an HTML anchor", async () => {

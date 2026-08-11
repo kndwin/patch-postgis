@@ -1,10 +1,11 @@
-import { Cause, DateTime, Effect, Option } from "effect";
+import { Cause, DateTime, Effect } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { WorkflowEngine } from "effect/unstable/workflow";
 import {
   WorkflowProjectionRepo,
   activityWorkflowStatus,
   attemptId,
+  requireRunningExecution,
   safeActivityError,
   transitionSteps,
 } from "./cadastre-workflow.repo";
@@ -15,10 +16,10 @@ export const projectActivity = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E, R | WorkflowProjectionRepo | WorkflowEngine.WorkflowInstance> =>
   Effect.fn(`CadastreSyncWorkflow.project.${name}`)(function* () {
-    const repoOption = yield* Effect.serviceOption(WorkflowProjectionRepo);
-    if (Option.isNone(repoOption)) return yield* effect;
-    const repo = repoOption.value;
+    const repo = yield* WorkflowProjectionRepo;
     const instance = yield* WorkflowEngine.WorkflowInstance;
+    const execution = yield* repo.detail(instance.executionId);
+    yield* requireRunningExecution(instance.executionId, execution);
     const attempt = yield* Activity.CurrentAttempt;
     const id = attemptId(instance.executionId, name, attempt);
     const startedAt = yield* DateTime.now;
@@ -62,6 +63,8 @@ export const projectActivity = <A, E, R>(
         }
       })();
 
+    const executionBeforeEffect = yield* repo.detail(instance.executionId);
+    yield* requireRunningExecution(instance.executionId, executionBeforeEffect);
     return yield* Effect.matchCauseEffect(effect, {
       onSuccess: (value) => update("completed").pipe(Effect.as(value)),
       onFailure: (cause) =>

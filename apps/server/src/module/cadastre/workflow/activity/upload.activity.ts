@@ -1,6 +1,7 @@
 import { Effect, Config } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import {
   CadastreActivityErrorSchema,
   UploadInputSchema,
@@ -16,6 +17,7 @@ import {
 
 export const UploadActivity = (input: typeof UploadInputSchema.Type) =>
   Activity.make({
+    interruptRetryPolicy: activityInterruptRetryPolicy,
     name: "CadastreSyncWorkflow/upload",
     error: CadastreActivityErrorSchema,
     success: UploadSuccessSchema,

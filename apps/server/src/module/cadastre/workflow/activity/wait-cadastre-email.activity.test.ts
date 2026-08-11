@@ -3,9 +3,11 @@ import { describe, expect, test } from "bun:test";
 import { DateTime, Effect, Layer, Schema } from "effect";
 import { Workflow, WorkflowEngine } from "effect/unstable/workflow";
 import { CadastreEmailIngestionService } from "../cadastre-email-ingestion.service";
+import { WorkflowProjectionRepo } from "../cadastre-workflow.repo";
 import { WaitCadastreEmailSuccessSchema } from "./wait-cadastre-email.activity.schema";
 import {
   lookupCadastreEmailActivity,
+  lookupCadastreEmail,
   WaitCadastreEmailActivity,
   type CadastreEmailWaitInput,
 } from "./wait-cadastre-email.activity";
@@ -27,6 +29,13 @@ const serviceLayer = (findNewestAfter: CadastreEmailIngestionService["findNewest
     findNewestAfter,
   } as never);
 
+const projectionLayer = Layer.succeed(WorkflowProjectionRepo, {
+  detail: () => Effect.succeed({ status: "running", steps: [], activities: [] }),
+  startActivity: () => Effect.void,
+  finishActivity: () => Effect.void,
+  updateWorkflow: () => Effect.void,
+} as never);
+
 const runActivity = <A, E>(
   activity: { readonly execute: Effect.Effect<A, E, any> },
   layer: Layer.Layer<any>,
@@ -35,7 +44,7 @@ const runActivity = <A, E>(
 describe("lookupCadastreEmailActivity", () => {
   test("returns the newest matching row in the durable result shape", async () => {
     const result = await runActivity(
-      lookupCadastreEmailActivity(input, 0),
+      { execute: lookupCadastreEmail(input) },
       serviceLayer(
         (() => Effect.succeed(row) as never) as CadastreEmailIngestionService["findNewestAfter"],
       ),
@@ -49,7 +58,7 @@ describe("lookupCadastreEmailActivity", () => {
 
   test("returns null when no matching row exists", async () => {
     const result = await runActivity(
-      lookupCadastreEmailActivity(input, 1),
+      { execute: lookupCadastreEmail(input) },
       serviceLayer(
         (() => Effect.succeed(null) as never) as CadastreEmailIngestionService["findNewestAfter"],
       ),
@@ -59,7 +68,7 @@ describe("lookupCadastreEmailActivity", () => {
 
   test("maps a typed database failure to CadastreEmailLookupError", async () => {
     const result = await Effect.runPromiseExit(
-      (lookupCadastreEmailActivity(input, 0).execute as Effect.Effect<any, any, any>).pipe(
+      (lookupCadastreEmail(input) as Effect.Effect<any, any, any>).pipe(
         Effect.provide(
           serviceLayer(
             (() =>
@@ -113,6 +122,7 @@ describe("wait activity with the in-memory workflow engine", () => {
               (() =>
                 Effect.succeed(row) as never) as CadastreEmailIngestionService["findNewestAfter"],
             ),
+            projectionLayer,
           ),
         ),
       ),

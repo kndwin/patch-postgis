@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import { CadastreSyncService } from "../../sync/cadastre-sync.service";
 import {
   CadastreActivityErrorSchema,
@@ -11,6 +12,7 @@ import { CadastreWorkflowPostgisError } from "./cadastre-workflow-error.schema";
 
 export const ValidatePromoteActivity = (input: typeof ValidatePromoteInputSchema.Type) =>
   Activity.make({
+    interruptRetryPolicy: activityInterruptRetryPolicy,
     name: "CadastreSyncWorkflow/validate-promote",
     error: CadastreActivityErrorSchema,
     success: ValidatePromoteSuccessSchema,

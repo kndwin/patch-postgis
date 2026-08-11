@@ -1,6 +1,7 @@
 import { Config, Effect } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import { mkdir, mkdtemp, open, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { CadastreSyncService, normalizeEtag, parseRunHash } from "../../sync/cadastre-sync.service";
@@ -57,6 +58,7 @@ const command = (args: string[]) =>
   });
 export const ImportPostgisActivity = (input: typeof ImportPostgisInputSchema.Type) =>
   Activity.make({
+    interruptRetryPolicy: activityInterruptRetryPolicy,
     name: "CadastreSyncWorkflow/import-postgis",
     error: CadastreActivityErrorSchema,
     success: ImportPostgisSuccessSchema,

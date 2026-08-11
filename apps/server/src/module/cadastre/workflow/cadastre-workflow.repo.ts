@@ -22,6 +22,18 @@ interface WorkflowStep {
 export const WorkflowProjectionError = "Workflow projection update failed";
 export const safeActivityError = () => "Activity failed";
 
+export class WorkflowReplayRejected extends Error {
+  readonly name = "WorkflowReplayRejected";
+}
+
+export const requireRunningExecution = (
+  executionId: string,
+  execution: { readonly status: string } | null,
+): Effect.Effect<void> =>
+  execution?.status === "running"
+    ? Effect.void
+    : Effect.die(new WorkflowReplayRejected(`Execution ${executionId} is missing or terminal`));
+
 /** Activity failures are details on a running execution; the workflow finalizer owns terminal state. */
 export const activityWorkflowStatus = (_status: "completed" | "failed") => "running" as const;
 
@@ -127,7 +139,7 @@ interface WorkflowProjectionRepoContract {
   ) => Effect.Effect<SchedulePage, EffectDrizzleQueryError>;
   readonly startWorkflow: (
     input: StartWorkflowInput,
-  ) => Effect.Effect<void, EffectDrizzleQueryError>;
+  ) => Effect.Effect<{ readonly status: string }, EffectDrizzleQueryError>;
   readonly updateWorkflow: (
     input: UpdateWorkflowInput,
   ) => Effect.Effect<void, EffectDrizzleQueryError>;
@@ -292,20 +304,34 @@ export class WorkflowProjectionRepo extends Context.Service<
           };
         })(),
       startWorkflow: (input: StartWorkflowInput) =>
-        db
-          .insert(workflowExecutions)
-          .values({
-            id: input.id,
-            workflowName: "CadastreSyncWorkflow",
-            status: "running",
-            trigger: input.trigger,
-            idempotencyKey: input.idempotencyKey,
-            startedAt: input.startedAt,
-            steps: JSON.stringify(initialSteps(input.startedAt.toISOString())),
-            parentExecutionId: input.parentExecutionId,
-            retryAttempt: input.retryAttempt,
-          })
-          .onConflictDoNothing(),
+        Effect.fn("WorkflowProjectionRepo.startWorkflow")(function* () {
+          const inserted = yield* db
+            .insert(workflowExecutions)
+            .values({
+              id: input.id,
+              workflowName: "CadastreSyncWorkflow",
+              status: "running",
+              trigger: input.trigger,
+              idempotencyKey: input.idempotencyKey,
+              startedAt: input.startedAt,
+              steps: JSON.stringify(initialSteps(input.startedAt.toISOString())),
+              parentExecutionId: input.parentExecutionId,
+              retryAttempt: input.retryAttempt,
+            })
+            .onConflictDoNothing()
+            .returning({ status: workflowExecutions.status });
+          if (inserted.length > 0) return inserted[0];
+          const existing = yield* db
+            .select({ status: workflowExecutions.status })
+            .from(workflowExecutions)
+            .where(eq(workflowExecutions.id, input.id))
+            .limit(1);
+          if (existing.length === 0)
+            return yield* Effect.die(
+              new WorkflowReplayRejected(`Execution ${input.id} disappeared after conflict`),
+            );
+          return existing[0];
+        })(),
       updateWorkflow: (input: UpdateWorkflowInput) =>
         db
           .update(workflowExecutions)

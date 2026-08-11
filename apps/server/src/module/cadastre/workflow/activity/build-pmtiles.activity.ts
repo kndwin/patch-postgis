@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { Clock, Config, Duration, Effect, Semaphore } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import {
   CadastreActivityErrorSchema,
   BuildPmtilesInputSchema,
@@ -223,6 +224,7 @@ const upload = async (
 
 export const BuildPmtilesActivity = (input: typeof BuildPmtilesInputSchema.Type) =>
   Activity.make({
+    interruptRetryPolicy: activityInterruptRetryPolicy,
     name: "CadastreSyncWorkflow/build-pmtiles",
     error: CadastreActivityErrorSchema,
     success: BuildPmtilesSuccessSchema,

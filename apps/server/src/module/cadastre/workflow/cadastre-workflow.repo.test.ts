@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { Effect } from "effect";
 import {
   activityWorkflowStatus,
   attemptId,
   initialSteps,
+  requireRunningExecution,
   safeActivityError,
   transitionSteps,
 } from "./cadastre-workflow.repo";
@@ -31,5 +33,16 @@ describe("workflow projection pure transitions", () => {
   test("activity failures do not finalize the workflow", () => {
     expect(activityWorkflowStatus("failed")).toBe("running");
     expect(activityWorkflowStatus("completed")).toBe("running");
+  });
+
+  test("terminal workflow replay stops before pipeline evaluation", async () => {
+    let evaluated = false;
+    const exit = await Effect.runPromiseExit(
+      requireRunningExecution("execution", { status: "succeeded" }).pipe(
+        Effect.andThen(Effect.sync(() => void (evaluated = true))),
+      ),
+    );
+    expect(exit._tag).toBe("Failure");
+    expect(evaluated).toBe(false);
   });
 });

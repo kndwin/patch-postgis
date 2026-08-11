@@ -1,6 +1,7 @@
 import { Effect, Config } from "effect";
 import { Activity } from "effect/unstable/workflow";
 import { projectActivity } from "../workflow-projection.activity";
+import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import { and, eq } from "drizzle-orm";
 import { Db } from "../../../../platform/database/client";
 import {
@@ -43,6 +44,7 @@ const inspect = async (args: string[]) => {
 
 export const VerifyPublishActivity = (input: typeof VerifyPublishInputSchema.Type) =>
   Activity.make({
+    interruptRetryPolicy: activityInterruptRetryPolicy,
     name: "CadastreSyncWorkflow/verify-publish",
     error: CadastreActivityErrorSchema,
     success: VerifyPublishSuccessSchema,

@@ -1,4 +1,5 @@
 import { projectActivity } from "../workflow-projection.activity";
+import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import { DateTime, Duration, Effect, Schema } from "effect";
 import { Activity, DurableClock } from "effect/unstable/workflow";
 import { CadastreEmailIngestionService } from "../cadastre-email-ingestion.service";
@@ -19,7 +20,7 @@ const activityName = (input: CadastreEmailWaitInput, poll: number) =>
 
 /** Creates one durable, parameterized lookup for a particular poll. */
 /** Construct a single durable lookup. Exported so its DB boundary can be tested without a live DB. */
-const lookupCadastreEmail = Effect.fn("WaitCadastreEmailActivity.lookup")(function* (
+export const lookupCadastreEmail = Effect.fn("WaitCadastreEmailActivity.lookup")(function* (
   input: CadastreEmailWaitInput,
 ) {
   const ingestion = yield* CadastreEmailIngestionService;
@@ -37,6 +38,7 @@ const lookupCadastreEmail = Effect.fn("WaitCadastreEmailActivity.lookup")(functi
 
 export const lookupCadastreEmailActivity = (input: CadastreEmailWaitInput, poll: number) =>
   Activity.make({
+    interruptRetryPolicy: activityInterruptRetryPolicy,
     name: activityName(input, poll),
     success: WaitCadastreEmailLookupResultSchema,
     error: WaitCadastreEmailLookupErrorSchema,
