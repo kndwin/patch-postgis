@@ -28,15 +28,20 @@ describe("PMTiles boundary contract", () => {
 
   test("requires a complete PMTiles v3 127-byte header", () => {
     const bytes = new Uint8Array(127);
-    bytes.set(new TextEncoder().encode("pmtiles"));
+    bytes.set([0x50, 0x4d, 0x54, 0x69, 0x6c, 0x65, 0x73]);
     bytes[7] = 3;
     expect(validPmtilesHeader(bytes)).toBe(true);
     expect(validPmtilesHeader(bytes.slice(0, 126))).toBe(false);
     bytes[0] = 0;
     expect(validPmtilesHeader(bytes)).toBe(false);
-    bytes[0] = "p".charCodeAt(0);
+    bytes[0] = 0x50;
     bytes[7] = 2;
     expect(validPmtilesHeader(bytes)).toBe(false);
+
+    const lowercase = new Uint8Array(127);
+    lowercase.set([0x70, 0x6d, 0x74, 0x69, 0x6c, 0x65, 0x73]);
+    lowercase[7] = 3;
+    expect(validPmtilesHeader(lowercase)).toBe(false);
   });
 
   test("normalizes and validates keys, checksums, ETags, and public URLs", () => {

@@ -1,4 +1,4 @@
-export const PMTILES_MAGIC = "pmtiles";
+export const PMTILES_MAGIC = "PMTiles";
 
 export const isPublishObjectKey = (value: unknown): value is string =>
   typeof value === "string" && /^runs\/[0-9a-f]{64}\/tiles\/lots\.pmtiles$/.test(value);

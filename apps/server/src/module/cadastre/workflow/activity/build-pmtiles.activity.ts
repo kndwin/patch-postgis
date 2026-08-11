@@ -39,6 +39,39 @@ const checksumFile = async (file: string) => {
   return hash.digest("hex");
 };
 
+type ExistingPmtilesHead =
+  | { readonly kind: "missing" }
+  | { readonly kind: "conflict" }
+  | {
+      readonly kind: "complete";
+      readonly size: number;
+      readonly etag: string;
+      readonly checksum: string;
+    };
+
+export const existingPmtilesFromHead = (
+  response: Pick<Response, "status" | "headers">,
+  runHash: string,
+): ExistingPmtilesHead => {
+  if (response.status === 404) return { kind: "missing" };
+  if (response.status !== 200) return { kind: "conflict" };
+  const contentLength = response.headers.get("content-length");
+  if (contentLength === null || !/^[1-9][0-9]*$/.test(contentLength)) return { kind: "conflict" };
+  const size = Number(contentLength);
+  const etag = normalizeEtag(response.headers.get("etag"));
+  const checksum = response.headers.get("x-content-sha256");
+  if (
+    !Number.isSafeInteger(size) ||
+    size <= 0 ||
+    response.headers.get("x-expected-size") !== String(size) ||
+    response.headers.get("x-run-hash") !== runHash ||
+    etag === null ||
+    !isSha256(checksum)
+  )
+    return { kind: "conflict" };
+  return { kind: "complete", size, etag, checksum };
+};
+
 export const safePgArgs = (databaseUrl: string, table = "cadastre_lots") => {
   const { safePgConnString } = parseDatabaseUrl(databaseUrl);
   if (!/^[a-z_][a-z0-9_]*$/.test(table)) throw new Error("Invalid table");
@@ -233,6 +266,42 @@ export const BuildPmtilesActivity = (input: typeof BuildPmtilesInputSchema.Type)
       "build-pmtiles",
       Effect.fn("CadastreSyncWorkflow.buildPmtiles.execute")(function* () {
         const buildStartedAt = yield* Clock.currentTimeNanos;
+        const tileUrl = yield* Config.string("CADASTRE_TILE_URL").pipe(
+          Effect.mapError(() => configFail("CADASTRE_TILE_URL is required")),
+        );
+        const token = yield* Config.string("CADASTRE_TILE_PUBLISH_TOKEN").pipe(
+          Effect.mapError(() => configFail("CADASTRE_TILE_PUBLISH_TOKEN is required")),
+        );
+        if (!token || !tileUrl.trim())
+          return yield* configFail("Required PMTiles configuration is blank");
+        const normalizedTileUrl = normalizeTileBaseUrl(tileUrl);
+        if (!normalizedTileUrl)
+          return yield* configFail("CADASTRE_TILE_URL must be an HTTP(S) URL without credentials");
+        const key = `runs/${input.runHash}/tiles/lots.pmtiles`;
+        const existingResponse = yield* Effect.tryPromise(() =>
+          fetch(`${normalizedTileUrl}/_publish?objectKey=${encodeURIComponent(key)}`, {
+            method: "HEAD",
+            headers: { authorization: `Bearer ${token}` },
+          }),
+        ).pipe(Effect.mapError(() => fail("PMTiles existing object check failed")));
+        const existing = existingPmtilesFromHead(existingResponse, input.runHash);
+        if (existing.kind === "conflict")
+          return yield* fail("Existing PMTiles object metadata conflicts with build");
+        if (existing.kind === "complete")
+          return {
+            source: input.source,
+            runHash: input.runHash,
+            snapshotVersion: input.snapshotVersion,
+            lotCount: input.lotCount,
+            objectKey: key,
+            size: existing.size,
+            etag: existing.etag,
+            checksum: existing.checksum,
+            minZoom: 14 as const,
+            maxZoom: 18 as const,
+            layer: "lots" as const,
+            tileType: "mvt" as const,
+          };
         const work = yield* Config.string("CADASTRE_WORK_DIR").pipe(
           Config.withDefault("/tmp"),
           Effect.mapError(() => configFail("Invalid work directory configuration")),
@@ -241,17 +310,8 @@ export const BuildPmtilesActivity = (input: typeof BuildPmtilesInputSchema.Type)
           Config.withDefault("postgres://postgres:postgres@localhost:5432/patch_postgis"),
           Effect.mapError(() => configFail("Invalid database configuration")),
         );
-        const tileUrl = yield* Config.string("CADASTRE_TILE_URL").pipe(
-          Effect.mapError(() => configFail("CADASTRE_TILE_URL is required")),
-        );
-        const token = yield* Config.string("CADASTRE_TILE_PUBLISH_TOKEN").pipe(
-          Effect.mapError(() => configFail("CADASTRE_TILE_PUBLISH_TOKEN is required")),
-        );
-        if (!token || !tileUrl.trim() || !databaseUrl.trim())
+        if (!databaseUrl.trim())
           return yield* configFail("Required PMTiles configuration is blank");
-        const normalizedTileUrl = normalizeTileBaseUrl(tileUrl);
-        if (!normalizedTileUrl)
-          return yield* configFail("CADASTRE_TILE_URL must be an HTTP(S) URL without credentials");
         yield* Effect.promise(() => mkdir(work, { recursive: true }));
         const space = yield* Effect.promise(() => statfs(work));
         if (space.bavail * space.bsize < MIN_FREE)
@@ -259,7 +319,6 @@ export const BuildPmtilesActivity = (input: typeof BuildPmtilesInputSchema.Type)
         const dir = yield* Effect.promise(() => mkdtemp(join(work, "pmtiles-")));
         const mbtiles = join(dir, "lots.mbtiles");
         const pmtiles = join(dir, "lots.pmtiles");
-        const key = `runs/${input.runHash}/tiles/lots.pmtiles`;
         try {
           yield* Effect.promise(() =>
             pipeExportToTippecanoe(
