@@ -34,7 +34,8 @@ const ServerLive = Layer.unwrap(
 );
 
 BunRuntime.runMain(
-  Layer.launch(Layer.merge(ServerLive, CadastreWorkflowRuntimeLive)).pipe(
+  Layer.launch(ServerLive).pipe(
+    Effect.provide(CadastreWorkflowRuntimeLive),
     Effect.provide(ObservabilityLive),
   ) as Effect.Effect<never, unknown, never>,
 );
