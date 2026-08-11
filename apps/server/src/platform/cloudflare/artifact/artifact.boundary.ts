@@ -18,6 +18,18 @@ export const isTrustedCadastreDownloadUrl = (value: string): boolean => {
 export const isSourceObjectKey = (value: string): boolean =>
   /^runs\/[0-9a-f]{64}\/source\/export\.zip$/.test(value);
 
+export const normalizeArtifactEtag = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  let etag = value.trim();
+  if (etag.startsWith("W/")) etag = etag.slice(2);
+  else if (/^w\//i.test(etag)) return null;
+  if (etag.startsWith('"') || etag.endsWith('"')) {
+    if (!(etag.startsWith('"') && etag.endsWith('"'))) return null;
+    etag = etag.slice(1, -1);
+  }
+  return etag !== "" && /^[^\s"]+$/.test(etag) ? etag : null;
+};
+
 export const MAX_PART_SIZE = 64 * 1024 * 1024;
 export const isValidChecksum = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f]{64}$/i.test(value);

@@ -7,12 +7,24 @@ import {
   isSourceObjectKey,
   isTrustedCadastreDownloadUrl,
   MAX_PART_SIZE,
+  normalizeArtifactEtag,
   sourceHeaders,
   sourceObjectKeyFromRequest,
 } from "./artifact.boundary";
 import { sourceObjectKey } from "../../../module/cadastre/workflow/activity/download-gdb.activity";
 
 describe("cadastre artifact boundary", () => {
+  test("normalizes strong and weak artifact ETags to the same opaque tag", () => {
+    expect(normalizeArtifactEtag('  "abc"  ')).toBe("abc");
+    expect(normalizeArtifactEtag('W/"abc"')).toBe(normalizeArtifactEtag('"abc"'));
+    expect(normalizeArtifactEtag('W/"abc"')).not.toBe(normalizeArtifactEtag('"def"'));
+  });
+
+  test("rejects empty and malformed artifact ETags", () => {
+    for (const etag of [null, "", '""', "W/", 'W/ "abc"', '"abc', 'abc"', "a b"])
+      expect(normalizeArtifactEtag(etag)).toBeNull();
+  });
+
   test("accepts only contiguous multipart parts with non-empty etags", () => {
     expect(
       parseMultipartParts([

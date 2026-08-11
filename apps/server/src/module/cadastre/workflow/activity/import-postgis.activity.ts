@@ -4,7 +4,7 @@ import { projectActivity } from "../workflow-projection.activity";
 import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import { mkdir, mkdtemp, open, rm } from "node:fs/promises";
 import { join } from "node:path";
-import { CadastreSyncService, normalizeEtag, parseRunHash } from "../../sync/cadastre-sync.service";
+import { CadastreSyncService, parseRunHash } from "../../sync/cadastre-sync.service";
 import {
   CadastreActivityErrorSchema,
   ImportPostgisInputSchema,
@@ -16,6 +16,7 @@ import {
   CadastreWorkflowPostgisError,
 } from "./cadastre-workflow-error.schema";
 import { recordImportedLots } from "../../../../platform/observability/cadastre.metrics";
+import { normalizeArtifactEtag } from "../../../../platform/cloudflare/artifact/artifact.boundary";
 
 export function fileGdbRoot(entries: readonly string[]): string {
   if (entries.length === 0) throw new Error("Archive is empty");
@@ -124,8 +125,8 @@ export const ImportPostgisActivity = (input: typeof ImportPostgisInputSchema.Typ
           const etag = response.headers.get("etag");
           if (
             (contentLength && Number(contentLength) !== input.source.size) ||
-            !etag ||
-            normalizeEtag(etag) !== normalizeEtag(input.source.etag)
+            normalizeArtifactEtag(etag) === null ||
+            normalizeArtifactEtag(etag) !== normalizeArtifactEtag(input.source.etag)
           )
             return yield* new CadastreWorkflowHttpError({
               message: "Artifact metadata mismatch",

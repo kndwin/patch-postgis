@@ -5,6 +5,7 @@ import { DbLive } from "../../../platform/database/client";
 import { WorkflowProjection } from "./cadastre-workflow.service";
 import { CadastreSyncWorkflow } from "./cadastre-workflow.workflow";
 import { WorkflowProjectionRepo, WorkflowProjectionRepoLive } from "./cadastre-workflow.repo";
+import { normalizeArtifactEtag } from "../../../platform/cloudflare/artifact/artifact.boundary";
 
 const boundedLimit = (value: string | undefined) =>
   Math.min(100, Math.max(1, Number(value ?? 25) || 25));
@@ -81,7 +82,7 @@ const WorkflowHandlersLive = HttpApiBuilder.group(AppApi, "workflow", (handlers)
         if (
           !artifact ||
           !artifact.objectKey.trim() ||
-          !artifact.etag.trim() ||
+          normalizeArtifactEtag(artifact.etag) === null ||
           !Number.isSafeInteger(artifact.size) ||
           artifact.size <= 0 ||
           !artifact.checksum ||
@@ -109,7 +110,8 @@ const WorkflowHandlersLive = HttpApiBuilder.group(AppApi, "workflow", (handlers)
         if (
           !head?.ok ||
           Number(head.headers.get("content-length")) !== artifact.size ||
-          head.headers.get("etag") !== artifact.etag ||
+          normalizeArtifactEtag(head.headers.get("etag")) !==
+            normalizeArtifactEtag(artifact.etag) ||
           head.headers.get("x-content-sha256") !== artifact.checksum
         )
           return yield* new HttpApiError.Conflict();

@@ -6,6 +6,7 @@ export {
   isValidChecksum,
   isValidPartSize,
   MAX_PART_SIZE,
+  normalizeArtifactEtag,
   parseMultipartParts,
   isTrustedCadastreDownloadUrl,
   sourceHeaders,

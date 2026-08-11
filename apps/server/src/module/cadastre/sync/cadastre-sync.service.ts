@@ -50,10 +50,6 @@ export function stagingIdentifiers(runHash: string): {
   };
 }
 
-export function normalizeEtag(etag: string): string {
-  return etag.trim().replace(/^"|"$/g, "");
-}
-
 // ---------------------------------------------------------------------------
 // Pure helpers – exported so they can be tested without GDAL or Postgres
 // ---------------------------------------------------------------------------
