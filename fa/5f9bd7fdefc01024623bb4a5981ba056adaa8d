@@ -1,0 +1,14 @@
+apps/server/src/main.ts
+  h_ba3efde196eb39 37-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "fa5f9bd7fdefc01024623bb4a5981ba056adaa8d",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
