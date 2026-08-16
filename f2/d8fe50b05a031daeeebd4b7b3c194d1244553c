@@ -1,0 +1,16 @@
+apps/server/src/platform/http/cors.test.ts
+  h_ba3efde196eb39 7,13,27
+apps/server/src/platform/http/cors.ts
+  h_ba3efde196eb39 6,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f2d8fe50b05a031daeeebd4b7b3c194d1244553c",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
