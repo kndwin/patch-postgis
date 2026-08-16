@@ -67,9 +67,7 @@ export default Alchemy.Stack(
         CADASTRE_INGESTION_URL: yield* Config.redacted("CADASTRE_INGESTION_URL").pipe(
           Config.withDefault("https://app-production-5c3a.up.railway.app/email-ingestions"),
         ),
-        CADASTRE_INGESTION_TOKEN: yield* Config.redacted("CADASTRE_INGESTION_TOKEN").pipe(
-          Config.withDefault(""),
-        ),
+        CADASTRE_INGESTION_TOKEN: yield* Config.redacted("CADASTRE_INGESTION_TOKEN"),
       },
       compatibility: { date: "2026-08-04" },
       observability: {
