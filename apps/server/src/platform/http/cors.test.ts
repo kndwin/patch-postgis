@@ -4,13 +4,13 @@ import { HttpMiddleware, HttpServerRequest, HttpServerResponse } from "effect/un
 import { CorsOptions } from "./cors";
 
 describe("API CORS preflight", () => {
-  test("allows browser trace context headers", async () => {
+  test("allows the browser trace context preflight", async () => {
     const request = {
       method: "OPTIONS",
       headers: {
         origin: "https://patch-postgis.kndwin.workers.dev",
         "access-control-request-method": "GET",
-        "access-control-request-headers": "traceparent, tracestate, baggage",
+        "access-control-request-headers": "b3,traceparent",
       },
     } as unknown as HttpServerRequest.HttpServerRequest;
 
@@ -24,7 +24,7 @@ describe("API CORS preflight", () => {
     expect(response.headers["access-control-allow-origin"]).toBe("*");
     expect(response.headers["access-control-allow-methods"]).toBe("GET, POST");
     expect(response.headers["access-control-allow-headers"]).toBe(
-      "Content-Type,traceparent,tracestate,baggage",
+      "Content-Type,b3,traceparent,tracestate,baggage",
     );
   });
 });
