@@ -1,4 +1,4 @@
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Config, DateTime, Effect } from "effect";
 import { Activity } from "effect/unstable/workflow";
@@ -148,30 +148,101 @@ export const uploadSourceArtifact = async (
   }
 };
 
-const download = async (url: string, file: string, expectedSize: number) => {
-  if (!isTrustedCadastreDownloadUrl(url)) throw new Error("Untrusted provider URL");
-  const response = await fetch(url, {
-    redirect: "error",
-    signal: AbortSignal.timeout(15 * 60 * 1000),
-  });
-  const contentLength = Number(response.headers.get("content-length"));
-  if (
-    !response.ok ||
-    !response.body ||
-    !Number.isSafeInteger(contentLength) ||
-    contentLength < 1 ||
-    contentLength > MAX_ARTIFACT_SIZE ||
-    contentLength !== expectedSize
-  )
-    throw new Error("Provider download failed");
-  const writer = Bun.file(file).writer();
-  for await (const chunk of response.body) await writer.write(chunk);
-  await writer.end();
-  const actual = (await stat(file)).size;
-  if (actual !== contentLength) throw new Error("Provider download size mismatch");
-  const hash = new Bun.CryptoHasher("sha256");
-  for await (const chunk of Bun.file(file).stream()) hash.update(chunk);
-  return { size: actual, checksum: hash.digest("hex") };
+type DownloadFailureCategory = "validation" | "http" | "stream" | "fetch";
+class DownloadFailure extends Error {
+  constructor(
+    readonly category: DownloadFailureCategory,
+    readonly status?: number,
+  ) {
+    super("Provider download failed");
+  }
+}
+
+const logTransferFailure = (error: unknown) => {
+  if (error instanceof DownloadFailure) {
+    const status = error.status === undefined ? "" : ` status=${error.status}`;
+    return Effect.logError(
+      `cadastre artifact transfer failed stage=provider-download category=${error.category}${status}`,
+    );
+  }
+  return Effect.logError(
+    "cadastre artifact transfer failed stage=artifact-transfer category=unknown",
+  );
+};
+
+const retryDelay = (attempt: number) =>
+  new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+
+/** Downloads directly from the provider. The response, rather than a preflight HEAD, is authoritative. */
+export const downloadProviderArtifact = async (url: string, file: string) => {
+  if (!isTrustedCadastreDownloadUrl(url)) throw new DownloadFailure("validation");
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await rm(file, { force: true }).catch(() => undefined);
+    let response: Response | undefined;
+    let writer: { write: (chunk: Uint8Array) => unknown; end: () => unknown } | undefined;
+    try {
+      try {
+        response = await fetch(url, {
+          redirect: "error",
+          signal: AbortSignal.timeout(15 * 60 * 1000),
+        });
+      } catch {
+        throw new DownloadFailure("fetch");
+      }
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 425 ||
+          response.status === 429 ||
+          response.status >= 500;
+        await response.body?.cancel?.()?.catch(() => undefined);
+        throw new DownloadFailure(retryable ? "http" : "validation", response.status);
+      }
+      const rawLength = response.headers.get("content-length");
+      const declared = rawLength === null ? undefined : Number(rawLength);
+      if (
+        (declared !== undefined &&
+          (!Number.isSafeInteger(declared) || declared < 1 || declared > MAX_ARTIFACT_SIZE)) ||
+        !response.body
+      )
+        throw new DownloadFailure("validation", response.status);
+
+      const currentWriter = Bun.file(file).writer();
+      writer = currentWriter;
+      let size = 0;
+      for await (const chunk of response.body) {
+        size += chunk.byteLength;
+        if (size > MAX_ARTIFACT_SIZE) throw new DownloadFailure("validation", response.status);
+        await currentWriter.write(chunk);
+      }
+      await currentWriter.end();
+      writer = undefined;
+      if (size < 1) throw new DownloadFailure("validation", response.status);
+      if (declared !== undefined && size !== declared)
+        throw new DownloadFailure("stream", response.status);
+      const hash = new Bun.CryptoHasher("sha256");
+      for await (const chunk of Bun.file(file).stream()) hash.update(chunk);
+      return { size, checksum: hash.digest("hex") };
+    } catch (error) {
+      if (writer) {
+        try {
+          await writer.end();
+        } catch {
+          /* remove the partial file below */
+        }
+      }
+      await response?.body?.cancel?.()?.catch(() => undefined);
+      await rm(file, { force: true }).catch(() => undefined);
+      const failure = error instanceof DownloadFailure ? error : new DownloadFailure("stream");
+      if (failure.category !== "validation" && attempt < 2) {
+        await retryDelay(attempt);
+        continue;
+      }
+      throw failure;
+    }
+  }
+  throw new DownloadFailure("fetch");
 };
 
 export const DownloadGdbActivity = (input: DownloadGdbInput) =>
@@ -232,13 +303,7 @@ export const DownloadGdbActivity = (input: DownloadGdbInput) =>
             }
             if (head.status !== 404) throw new Error("Artifact HEAD failed");
             const file = join(dir, "export.zip");
-            const contentLength = await fetch(input.downloadUrl, {
-              method: "HEAD",
-              redirect: "error",
-              signal: AbortSignal.timeout(60 * 1000),
-            });
-            const expected = Number(contentLength.headers.get("content-length"));
-            const downloaded = await download(input.downloadUrl, file, expected);
+            const downloaded = await downloadProviderArtifact(input.downloadUrl, file);
             return await uploadSourceArtifact(
               url,
               token,
@@ -251,6 +316,7 @@ export const DownloadGdbActivity = (input: DownloadGdbInput) =>
             await rm(dir, { recursive: true, force: true }).catch(() => undefined);
           }
         }).pipe(
+          Effect.tapError(logTransferFailure),
           Effect.mapError(
             () => new CadastreWorkflowJsonError({ message: "Artifact transfer failed" }),
           ),
