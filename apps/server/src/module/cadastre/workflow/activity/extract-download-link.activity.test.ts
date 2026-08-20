@@ -5,7 +5,7 @@ import { extractDownloadLink } from "./extract-download-link.activity";
 const run = (parsedEmail: unknown) => Effect.runPromise(extractDownloadLink({ parsedEmail }));
 
 describe("extract-download-link activity", () => {
-  test("extracts a decoded URL from an HTML anchor", async () => {
+  test("extracts an HTML-encoded NSW export URL", async () => {
     expect(
       await run({
         html: '<a href="https://portal.spatial.nsw.gov.au/exports/cadastre.zip?sig=a&amp;x=1">download</a>',
@@ -29,6 +29,15 @@ describe("extract-download-link activity", () => {
   ])("rejects invalid URL %s", async (url) => {
     try {
       await run({ text: url });
+      throw new Error("expected extraction to fail");
+    } catch (error) {
+      expect(String(error)).toContain("No valid cadastre download URL");
+    }
+  });
+
+  test("rejects provider failure and support URLs", async () => {
+    try {
+      await run({ text: "Your export failed. Visit https://www.spatial.nsw.gov.au/support" });
       throw new Error("expected extraction to fail");
     } catch (error) {
       expect(String(error)).toContain("No valid cadastre download URL");

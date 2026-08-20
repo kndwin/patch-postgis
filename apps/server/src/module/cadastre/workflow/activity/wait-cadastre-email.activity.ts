@@ -3,6 +3,7 @@ import { activityInterruptRetryPolicy } from "./activity-options.activity";
 import { DateTime, Duration, Effect, Schema } from "effect";
 import { Activity, DurableClock } from "effect/unstable/workflow";
 import { CadastreEmailIngestionService } from "../cadastre-email-ingestion.service";
+import { isTrustedCadastreDownloadUrl } from "@patch/http-contract";
 import {
   CadastreEmailTimeoutError,
   CadastreEmailLookupError,
@@ -25,9 +26,12 @@ export const lookupCadastreEmail = Effect.fn("WaitCadastreEmailActivity.lookup")
 ) {
   const ingestion = yield* CadastreEmailIngestionService;
   const row = yield* ingestion
-    .findNewestAfter(input.emailAddress, DateTime.toDate(DateTime.makeUnsafe(input.requestedAt)))
+    .findNewestTrustedExportAfter(
+      input.emailAddress,
+      DateTime.toDate(DateTime.makeUnsafe(input.requestedAt)),
+    )
     .pipe(Effect.mapError(() => new CadastreEmailLookupError({ message: "Email lookup failed" })));
-  return row === null
+  return row === null || !isTrustedCadastreDownloadUrl(row.extractedDownloadUrl)
     ? null
     : Schema.decodeUnknownSync(WaitCadastreEmailLookupResultSchema)({
         messageId: row.messageId,

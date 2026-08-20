@@ -69,7 +69,6 @@ export const CadastreEmailIngestionPayloadSchema = Schema.Struct({
   metadataR2Key: Schema.String,
   metadata: Schema.String,
   parsedEmail: Schema.String,
-  extractedDownloadUrl: Schema.NullOr(Schema.String),
 });
 export const CadastreEmailIngestionPayloadJsonSchema = Schema.fromJsonString(
   CadastreEmailIngestionPayloadSchema,

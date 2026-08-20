@@ -1,13 +1,18 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull } from "drizzle-orm";
 import { Context, DateTime, Effect, Layer } from "effect";
 import { EffectDrizzleQueryError } from "drizzle-orm/effect-core";
 import { Db } from "../../../platform/database/client";
 import { cadastreEmailIngestions } from "./cadastre-email-ingestion.model";
+import { isTrustedCadastreDownloadUrl } from "@patch/http-contract";
 
 export type EmailIngestionInput = Omit<
   typeof cadastreEmailIngestions.$inferInsert,
   "id" | "createdAt" | "updatedAt"
 >;
+
+export const selectNewestTrustedCadastreEmail = (
+  rows: readonly (typeof cadastreEmailIngestions.$inferSelect)[],
+) => rows.find((row) => isTrustedCadastreDownloadUrl(row.extractedDownloadUrl)) ?? null;
 
 export class CadastreEmailIngestionRepo extends Context.Service<CadastreEmailIngestionRepo>()(
   "CadastreEmailIngestionRepo",
@@ -29,10 +34,9 @@ export class CadastreEmailIngestionRepo extends Context.Service<CadastreEmailIng
             .returning()
             .pipe(Effect.map(([row]) => row));
         }),
-        findNewestAfter: Effect.fn("CadastreEmailIngestionRepo.findNewestAfter")(function* (
-          envelopeTo: string,
-          receivedAfter: Date,
-        ) {
+        findNewestTrustedExportAfter: Effect.fn(
+          "CadastreEmailIngestionRepo.findNewestTrustedExportAfter",
+        )(function* (envelopeTo: string, receivedAfter: Date) {
           return yield* db
             .select()
             .from(cadastreEmailIngestions)
@@ -40,11 +44,11 @@ export class CadastreEmailIngestionRepo extends Context.Service<CadastreEmailIng
               and(
                 eq(cadastreEmailIngestions.envelopeTo, envelopeTo),
                 gt(cadastreEmailIngestions.receivedAt, receivedAfter),
+                isNotNull(cadastreEmailIngestions.extractedDownloadUrl),
               ),
             )
             .orderBy(desc(cadastreEmailIngestions.receivedAt))
-            .limit(1)
-            .pipe(Effect.map(([row]) => row ?? null));
+            .pipe(Effect.map(selectNewestTrustedCadastreEmail));
         }),
       };
     })(),
@@ -53,7 +57,7 @@ export class CadastreEmailIngestionRepo extends Context.Service<CadastreEmailIng
   declare readonly upsert: (
     input: EmailIngestionInput,
   ) => Effect.Effect<typeof cadastreEmailIngestions.$inferSelect, EffectDrizzleQueryError>;
-  declare readonly findNewestAfter: (
+  declare readonly findNewestTrustedExportAfter: (
     envelopeTo: string,
     receivedAfter: Date,
   ) => Effect.Effect<typeof cadastreEmailIngestions.$inferSelect | null, EffectDrizzleQueryError>;

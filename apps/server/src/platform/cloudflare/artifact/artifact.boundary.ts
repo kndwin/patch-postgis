@@ -1,19 +1,4 @@
-export const isTrustedCadastreDownloadUrl = (value: string): boolean => {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      url.hostname === "portal.spatial.nsw.gov.au" &&
-      !url.port &&
-      !url.username &&
-      !url.password &&
-      url.pathname.startsWith("/exports/") &&
-      url.pathname.toLowerCase().endsWith(".zip")
-    );
-  } catch {
-    return false;
-  }
-};
+export { isTrustedCadastreDownloadUrl } from "@patch/http-contract";
 
 export const isSourceObjectKey = (value: string): boolean =>
   /^runs\/[0-9a-f]{64}\/source\/export\.zip$/.test(value);

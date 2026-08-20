@@ -58,9 +58,6 @@ const ingestEmail = Effect.fn("CadastreEmailWorker.ingestEmail")(function* (
 
   const ingestionUrl = yield* Config.string("CADASTRE_INGESTION_URL");
   const ingestionToken = yield* Config.string("CADASTRE_INGESTION_TOKEN");
-  const text = [parsed.text, parsed.html].filter(Boolean).join("\n");
-  const extractedDownloadUrl =
-    text.match(/https?:\/\/[^\s<>"']+/i)?.[0]?.replace(/[),.]+$/, "") ?? null;
   const callbackBody = yield* Schema.encodeUnknownEffect(CadastreEmailIngestionPayloadJsonSchema)({
     messageId: parsed.messageId ?? message.headers.get("Message-ID") ?? "",
     envelope: { from: message.from, to: message.to },
@@ -73,7 +70,6 @@ const ingestEmail = Effect.fn("CadastreEmailWorker.ingestEmail")(function* (
       ...parsed,
       attachments: parsed.attachments.map(({ content: _content, ...attachment }) => attachment),
     }),
-    extractedDownloadUrl,
   });
   const callback = yield* Effect.tryPromise(() =>
     fetch(ingestionUrl, {

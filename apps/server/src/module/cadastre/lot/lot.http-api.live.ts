@@ -6,6 +6,7 @@ import { parseArcgisQuery } from "./lot.arcgis";
 import { CadastreStatusService } from "../sync/cadastre-sync-status.service";
 import { Config, DateTime, Effect, Option } from "effect";
 import { CadastreEmailIngestionService } from "../workflow/cadastre-email-ingestion.service";
+import { extractTrustedCadastreDownloadUrl } from "@patch/http-contract";
 
 export const CadastreLive = HttpApiBuilder.group(AppApi, "cadastre", (handlers) =>
   handlers
@@ -39,7 +40,7 @@ export const CadastreLive = HttpApiBuilder.group(AppApi, "cadastre", (handlers) 
             metadataR2Key: payload.metadataR2Key,
             metadata,
             parsedEmail,
-            extractedDownloadUrl: payload.extractedDownloadUrl,
+            extractedDownloadUrl: extractTrustedCadastreDownloadUrl(parsedEmail),
           })
           .pipe(
             Effect.catchTag("EffectDrizzleQueryError", () =>

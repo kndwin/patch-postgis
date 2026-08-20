@@ -11,14 +11,17 @@ export class CadastreEmailIngestionService extends Context.Service<CadastreEmail
   {
     make: Effect.fn("CadastreEmailIngestionService.make")(function* () {
       const repo = yield* CadastreEmailIngestionRepo;
-      return { ingest: repo.upsert, findNewestAfter: repo.findNewestAfter };
+      return {
+        ingest: repo.upsert,
+        findNewestTrustedExportAfter: repo.findNewestTrustedExportAfter,
+      };
     })(),
   },
 ) {
   declare readonly ingest: (
     input: EmailIngestionInput,
   ) => ReturnType<CadastreEmailIngestionRepo["upsert"]>;
-  declare readonly findNewestAfter: CadastreEmailIngestionRepo["findNewestAfter"];
+  declare readonly findNewestTrustedExportAfter: CadastreEmailIngestionRepo["findNewestTrustedExportAfter"];
 }
 
 export const CadastreEmailIngestionServiceLive = Layer.effect(

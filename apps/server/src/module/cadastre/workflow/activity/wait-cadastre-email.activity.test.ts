@@ -1,6 +1,6 @@
 /* oxlint-disable no-explicit-any -- Effect's polymorphic test seams require an erased environment. */
 import { describe, expect, test } from "bun:test";
-import { DateTime, Effect, Layer, Schema } from "effect";
+import { DateTime, Duration, Effect, Layer, Schema } from "effect";
 import { Workflow, WorkflowEngine } from "effect/unstable/workflow";
 import { CadastreEmailIngestionService } from "../cadastre-email-ingestion.service";
 import { WorkflowProjectionRepo } from "../cadastre-workflow.repo";
@@ -21,12 +21,15 @@ const row = {
   messageId: "message-1",
   receivedAt: DateTime.toDate(DateTime.makeUnsafe("2026-08-05T00:01:00.000Z")),
   parsedEmail: { text: "export body", html: "<p>export body</p>" },
+  extractedDownloadUrl: "https://portal.spatial.nsw.gov.au/exports/cadastre.zip",
 };
 
-const serviceLayer = (findNewestAfter: CadastreEmailIngestionService["findNewestAfter"]) =>
+const serviceLayer = (
+  findNewestTrustedExportAfter: CadastreEmailIngestionService["findNewestTrustedExportAfter"],
+) =>
   Layer.succeed(CadastreEmailIngestionService, {
     ingest: (() => Effect.die("unused")) as never,
-    findNewestAfter,
+    findNewestTrustedExportAfter,
   } as never);
 
 const projectionLayer = Layer.succeed(WorkflowProjectionRepo, {
@@ -46,7 +49,10 @@ describe("lookupCadastreEmailActivity", () => {
     const result = await runActivity(
       { execute: lookupCadastreEmail(input) },
       serviceLayer(
-        (() => Effect.succeed(row) as never) as CadastreEmailIngestionService["findNewestAfter"],
+        (() =>
+          Effect.succeed(
+            row,
+          ) as never) as CadastreEmailIngestionService["findNewestTrustedExportAfter"],
       ),
     );
     expect(result).toEqual({
@@ -60,7 +66,24 @@ describe("lookupCadastreEmailActivity", () => {
     const result = await runActivity(
       { execute: lookupCadastreEmail(input) },
       serviceLayer(
-        (() => Effect.succeed(null) as never) as CadastreEmailIngestionService["findNewestAfter"],
+        (() =>
+          Effect.succeed(
+            null,
+          ) as never) as CadastreEmailIngestionService["findNewestTrustedExportAfter"],
+      ),
+    );
+    expect(result).toBeNull();
+  });
+
+  test("ignores provider failures and legacy support URLs", async () => {
+    const invalidRow = { ...row, extractedDownloadUrl: "https://www.spatial.nsw.gov.au/support" };
+    const result = await runActivity(
+      { execute: lookupCadastreEmail(input) },
+      serviceLayer(
+        (() =>
+          Effect.succeed(
+            invalidRow,
+          ) as never) as CadastreEmailIngestionService["findNewestTrustedExportAfter"],
       ),
     );
     expect(result).toBeNull();
@@ -74,7 +97,7 @@ describe("lookupCadastreEmailActivity", () => {
             (() =>
               Effect.fail(
                 new Error("database unavailable"),
-              ) as never) as CadastreEmailIngestionService["findNewestAfter"],
+              ) as never) as CadastreEmailIngestionService["findNewestTrustedExportAfter"],
           ),
         ),
       ) as any,
@@ -120,7 +143,9 @@ describe("wait activity with the in-memory workflow engine", () => {
             workflowLayer.pipe(Layer.provide(WorkflowEngine.layerMemory)),
             serviceLayer(
               (() =>
-                Effect.succeed(row) as never) as CadastreEmailIngestionService["findNewestAfter"],
+                Effect.succeed(
+                  row,
+                ) as never) as CadastreEmailIngestionService["findNewestTrustedExportAfter"],
             ),
             projectionLayer,
           ),
@@ -132,5 +157,43 @@ describe("wait activity with the in-memory workflow engine", () => {
       receivedAt: row.receivedAt.toISOString(),
       parsedEmail: row.parsedEmail,
     });
+  });
+
+  test("continues polling after a provider failure until a valid export arrives", async () => {
+    let calls = 0;
+    const workflowLayer = MemoryWaitWorkflow.toLayer(
+      () =>
+        WaitCadastreEmailActivity.execute(input, {
+          pollCount: 2,
+          pollInterval: Duration.zero,
+        }) as Effect.Effect<
+          {
+            readonly messageId: string;
+            readonly receivedAt: string;
+            readonly parsedEmail: unknown;
+          },
+          unknown,
+          never
+        >,
+    );
+    const result = await Effect.runPromise(
+      MemoryWaitWorkflow.execute({ request: "failure-then-export" }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            WorkflowEngine.layerMemory,
+            workflowLayer.pipe(Layer.provide(WorkflowEngine.layerMemory)),
+            serviceLayer((() => {
+              calls += 1;
+              return Effect.succeed(
+                calls === 1 ? { ...row, extractedDownloadUrl: null } : row,
+              ) as never;
+            }) as CadastreEmailIngestionService["findNewestTrustedExportAfter"]),
+            projectionLayer,
+          ),
+        ),
+      ),
+    );
+    expect(calls).toBe(2);
+    expect(result.messageId).toBe(row.messageId);
   });
 });
