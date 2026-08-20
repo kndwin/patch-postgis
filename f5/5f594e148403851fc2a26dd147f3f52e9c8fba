@@ -1,0 +1,34 @@
+apps/server/src/module/cadastre/lot/lot.http-api.live.ts
+  h_ba3efde196eb39 9,43
+apps/server/src/module/cadastre/workflow/activity/extract-download-link.activity.test.ts
+  h_ba3efde196eb39 8,38-46
+apps/server/src/module/cadastre/workflow/activity/extract-download-link.activity.ts
+  h_ba3efde196eb39 2,21,26-27
+apps/server/src/module/cadastre/workflow/activity/wait-cadastre-email.activity.test.ts
+  h_ba3efde196eb39 3,24,27-29,32,52-55,69-86,100,146-148,161-198
+apps/server/src/module/cadastre/workflow/activity/wait-cadastre-email.activity.ts
+  h_ba3efde196eb39 6,29-32,34
+apps/server/src/module/cadastre/workflow/cadastre-email-ingestion.repo.test.ts
+  h_ba3efde196eb39 1-23
+apps/server/src/module/cadastre/workflow/cadastre-email-ingestion.repo.ts
+  h_ba3efde196eb39 1,6,13-16,37-39,47,51,60
+apps/server/src/module/cadastre/workflow/cadastre-email-ingestion.service.ts
+  h_ba3efde196eb39 14-17,24
+apps/server/src/platform/cloudflare/artifact/artifact.boundary.ts
+  h_ba3efde196eb39 1
+packages/http-contract/src/cadastre-download-url.ts
+  h_ba3efde196eb39 1-37
+packages/http-contract/src/index.ts
+  h_ba3efde196eb39 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f55f594e148403851fc2a26dd147f3f52e9c8fba",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
