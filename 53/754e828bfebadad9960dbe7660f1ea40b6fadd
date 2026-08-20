@@ -1,0 +1,14 @@
+infra/prod/cloudflare.ts
+  h_ba3efde196eb39 94,110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "53754e828bfebadad9960dbe7660f1ea40b6fadd",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
