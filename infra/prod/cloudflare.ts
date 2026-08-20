@@ -91,9 +91,7 @@ export default Alchemy.Stack(
       main: "apps/server/src/platform/cloudflare/tiles/tiles.worker-handler.ts",
       env: {
         TILES: tiles,
-        CADASTRE_TILE_PUBLISH_TOKEN: yield* Config.redacted("CADASTRE_TILE_PUBLISH_TOKEN").pipe(
-          Config.withDefault(""),
-        ),
+        CADASTRE_TILE_PUBLISH_TOKEN: yield* Config.redacted("CADASTRE_TILE_PUBLISH_TOKEN"),
       },
       compatibility: { date: "2026-08-04" },
       observability: {
@@ -109,9 +107,7 @@ export default Alchemy.Stack(
       main: "apps/server/src/platform/cloudflare/artifact/artifact.worker-handler.ts",
       env: {
         ARTIFACTS: artifacts,
-        CADASTRE_ARTIFACT_TOKEN: yield* Config.redacted("CADASTRE_ARTIFACT_TOKEN").pipe(
-          Config.withDefault(""),
-        ),
+        CADASTRE_ARTIFACT_TOKEN: yield* Config.redacted("CADASTRE_ARTIFACT_TOKEN"),
       },
       compatibility: { date: "2026-08-04" },
       observability: {
