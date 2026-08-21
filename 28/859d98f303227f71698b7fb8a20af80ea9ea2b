@@ -1,0 +1,18 @@
+apps/browser/src/module/map/map.route.tsx
+  h_ba3efde196eb39 221,262
+apps/server/src/module/cadastre/lot/lot.http-api.live.ts
+  h_ba3efde196eb39 11-15,142,145
+apps/server/src/module/cadastre/lot/lot.http-api.test.ts
+  h_ba3efde196eb39 11,53-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "28859d98f303227f71698b7fb8a20af80ea9ea2b",
+  "prompts": {},
+  "humans": {
+    "h_ba3efde196eb39": {
+      "author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
