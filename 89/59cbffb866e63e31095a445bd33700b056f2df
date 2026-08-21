@@ -1,0 +1,19 @@
+apps/server/src/platform/cloudflare/tiles/tiles.worker-handler.test.ts
+  s_fdc303ff594ae5::t_11557d024a8b91 7-8,23-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "8959cbffb866e63e31095a445bd33700b056f2df",
+  "prompts": {},
+  "sessions": {
+    "s_fdc303ff594ae5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3562b550-1fe5-4251-8502-c2fe040b4582",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Kevin <kevin@sucasa.com.au>"
+    }
+  }
+}
