@@ -2,6 +2,15 @@
 
 import { Effect, Option } from "effect";
 import { R2, Worker, WorkerEnvironment } from "effect-cf";
+import { isPublishObjectKey, isSha256, normalizeEtag } from "../../cadastre/pmtiles.boundary";
+export { isPublishObjectKey } from "../../cadastre/pmtiles.boundary";
+import {
+  LATEST_PATH,
+  LATEST_POINTER_KEY,
+  LATEST_PUBLISH_PATH,
+  parseLatestManifest,
+  type LatestManifest,
+} from "./tiles.worker-boundary";
 export { publishActionForRequest, routePublishRequest } from "./tiles.publish-routing";
 import { publishActionForRequest, routePublishRequest } from "./tiles.publish-routing";
 
@@ -18,9 +27,8 @@ const CORS_HEADERS = {
 
 const CACHE_CONTROL = "public, max-age=31536000, immutable";
 const PUBLISH_PATH = "/_publish";
+const REDIRECT_CACHE_CONTROL = "no-store";
 
-export const isPublishObjectKey = (value: unknown): value is string =>
-  typeof value === "string" && /^runs\/[0-9a-f]{64}\/tiles\/lots\.pmtiles$/.test(value);
 export const publishObjectKey = (request: Request): string | null => {
   try {
     const value = new URL(request.url).searchParams.get("objectKey");
@@ -213,6 +221,80 @@ const publishHandler = Effect.fn("CadastreTilesWorker.publish")(function* (
   return privateError();
 });
 
+const latestPublishHandler = Effect.fn("CadastreTilesWorker.publishLatest")(function* (
+  request: Request,
+  env: Record<string, unknown>,
+) {
+  if (request.method !== "PUT" && request.method !== "POST") return privateError(405);
+  if (!authorized(request, env)) return privateError(401);
+  let body: unknown;
+  try {
+    body = yield* Effect.promise(() => request.json());
+  } catch {
+    return privateError();
+  }
+  const input = body as Record<string, unknown> | null;
+  if (
+    !input ||
+    !isPublishObjectKey(input.objectKey) ||
+    !Number.isSafeInteger(input.size) ||
+    (input.size as number) <= 0 ||
+    !isSha256(input.checksum) ||
+    typeof input.etag !== "string" ||
+    normalizeEtag(input.etag) === null
+  )
+    return privateError();
+  const bucket = env.TILES as R2Bucket;
+  const object = yield* Effect.promise(() => bucket.head(input.objectKey as string));
+  if (
+    !object ||
+    object.size !== input.size ||
+    object.customMetadata?.checksum !== input.checksum ||
+    normalizeEtag(object.httpEtag) !== normalizeEtag(input.etag as string)
+  )
+    return privateError(409);
+  const manifest: LatestManifest = {
+    version: 1,
+    objectKey: input.objectKey as string,
+    size: input.size as number,
+    etag: input.etag as string,
+    checksum: input.checksum as string,
+  };
+  yield* Effect.promise(() =>
+    bucket.put(LATEST_POINTER_KEY, JSON.stringify(manifest), {
+      httpMetadata: { contentType: "application/json", cacheControl: REDIRECT_CACHE_CONTROL },
+    }),
+  );
+  return json({ published: true, objectKey: manifest.objectKey });
+});
+
+const latestRedirect = Effect.fn("CadastreTilesWorker.latestRedirect")(function* (
+  request: Request,
+  env: Record<string, unknown>,
+) {
+  const bucket = env.TILES as R2Bucket;
+  const pointer = yield* Effect.promise(() => bucket.get(LATEST_POINTER_KEY));
+  if (!pointer) return new Response("Not Found", { status: 404, headers: CORS_HEADERS });
+  let manifest: LatestManifest | null = null;
+  try {
+    manifest = parseLatestManifest(yield* Effect.promise(() => pointer.json()));
+  } catch {
+    manifest = null;
+  }
+  if (!manifest) return new Response("Not Found", { status: 404, headers: CORS_HEADERS });
+  const target = yield* Effect.promise(() => bucket.head(manifest!.objectKey));
+  if (
+    !target ||
+    target.size !== manifest.size ||
+    normalizeEtag(target.httpEtag) !== normalizeEtag(manifest.etag)
+  )
+    return new Response("Not Found", { status: 404, headers: CORS_HEADERS });
+  const headers = new Headers(CORS_HEADERS);
+  headers.set("location", new URL(`/${manifest.objectKey}`, request.url).toString());
+  headers.set("cache-control", REDIRECT_CACHE_CONTROL);
+  return new Response(null, { status: 307, headers });
+});
+
 function archiveKey(pathname: string): string | null {
   try {
     const key = decodeURIComponent(pathname.replace(/^\//, ""));
@@ -257,7 +339,12 @@ const fetchHandler = Effect.fn("CadastreTilesWorker.fetch")(function* () {
   const request = yield* Worker.NativeRequest;
   const tiles = yield* Tiles;
   const env = yield* WorkerEnvironment;
-  if (new URL(request.url).pathname === PUBLISH_PATH)
+  const pathname = new URL(request.url).pathname;
+  if (pathname === LATEST_PUBLISH_PATH)
+    return yield* latestPublishHandler(request, env as unknown as Record<string, unknown>).pipe(
+      Effect.catchCause(() => Effect.succeed(privateError(500))),
+    );
+  if (pathname === PUBLISH_PATH)
     return yield* publishHandler(request, env as unknown as Record<string, unknown>).pipe(
       Effect.catchCause(() => Effect.succeed(privateError(500))),
     );
@@ -270,6 +357,15 @@ const fetchHandler = Effect.fn("CadastreTilesWorker.fetch")(function* () {
       headers: { ...CORS_HEADERS, allow: "GET, HEAD, OPTIONS" },
     });
   }
+
+  if (pathname === LATEST_PATH)
+    return yield* latestRedirect(request, env as unknown as Record<string, unknown>).pipe(
+      Effect.catchCause(() =>
+        Effect.succeed(
+          new Response("Internal Server Error", { status: 500, headers: CORS_HEADERS }),
+        ),
+      ),
+    );
 
   const key = archiveKey(new URL(request.url).pathname);
   if (!key) return new Response("Not Found", { status: 404, headers: CORS_HEADERS });

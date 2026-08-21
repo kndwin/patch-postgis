@@ -1,5 +1,32 @@
 /// <reference types="@cloudflare/workers-types" />
 
+import { isPublishObjectKey, isSha256, normalizeEtag } from "../../cadastre/pmtiles.boundary";
+
+export const LATEST_PATH = "/latest.pmtiles";
+export const LATEST_PUBLISH_PATH = "/_publish/latest";
+export const LATEST_POINTER_KEY = "manifests/latest.json";
+export type LatestManifest = {
+  version: 1;
+  objectKey: string;
+  size: number;
+  etag: string;
+  checksum: string;
+};
+export const parseLatestManifest = (value: unknown): LatestManifest | null => {
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  return Object.keys(record).length === 5 &&
+    record.version === 1 &&
+    isPublishObjectKey(record.objectKey) &&
+    Number.isSafeInteger(record.size) &&
+    (record.size as number) > 0 &&
+    typeof record.etag === "string" &&
+    normalizeEtag(record.etag) !== null &&
+    isSha256(record.checksum)
+    ? (record as LatestManifest)
+    : null;
+};
+
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, HEAD, OPTIONS",

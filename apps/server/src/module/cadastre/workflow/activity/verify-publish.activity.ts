@@ -157,6 +157,52 @@ export const VerifyPublishActivity = (input: typeof VerifyPublishInputSchema.Typ
                 }),
             ),
           );
+        const token = yield* Config.string("CADASTRE_TILE_PUBLISH_TOKEN").pipe(
+          Effect.mapError(
+            () =>
+              new CadastreWorkflowConfigError({
+                message: "CADASTRE_TILE_PUBLISH_TOKEN is required",
+              }),
+          ),
+        );
+        const pointer = yield* Effect.tryPromise(async () => {
+          let response: Response | undefined;
+          let lastError: unknown;
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+              response = await fetch(`${normalizedBase}/_publish/latest`, {
+                method: "PUT",
+                headers: {
+                  authorization: `Bearer ${token}`,
+                  "content-type": "application/json",
+                },
+                body: JSON.stringify({
+                  objectKey: input.objectKey,
+                  size: input.size,
+                  etag: input.etag,
+                  checksum: input.checksum,
+                }),
+              });
+              if (response.ok) return response;
+            } catch (error) {
+              lastError = error;
+            }
+            if (attempt < 2) await Bun.sleep(250 * 2 ** attempt);
+          }
+          if (!response && lastError) throw lastError;
+          return response!;
+        }).pipe(
+          Effect.mapError(
+            () =>
+              new CadastreWorkflowPmtilesError({
+                message: "Latest tile pointer publication failed",
+              }),
+          ),
+        );
+        if (!pointer.ok)
+          return yield* new CadastreWorkflowPmtilesError({
+            message: "Latest tile pointer publication failed",
+          });
         return {
           snapshotVersion: input.snapshotVersion,
           objectKey: input.objectKey,

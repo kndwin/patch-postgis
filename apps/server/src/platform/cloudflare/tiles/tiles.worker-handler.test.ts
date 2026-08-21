@@ -4,6 +4,8 @@ import {
   keyRunHash,
   parseMultipartParts,
   validCompletionMetadata,
+  LATEST_POINTER_KEY,
+  parseLatestManifest,
 } from "./tiles.worker-boundary";
 import { routePublishRequest } from "./tiles.publish-routing";
 
@@ -18,6 +20,19 @@ const object = (partial = false) =>
   }) as unknown as R2Object;
 
 describe("tile publish routing", () => {
+  test("validates the immutable latest pointer manifest", () => {
+    const manifest = {
+      version: 1,
+      objectKey: `runs/${hash}/tiles/lots.pmtiles`,
+      size: 100,
+      etag: '"etag"',
+      checksum: "b".repeat(64),
+    } as const;
+    expect(LATEST_POINTER_KEY).toBe("manifests/latest.json");
+    expect(parseLatestManifest(manifest)).toEqual(manifest);
+    expect(parseLatestManifest({ ...manifest, objectKey: "runs/evil.pmtiles" })).toBeNull();
+    expect(parseLatestManifest({ ...manifest, version: 2 })).toBeNull();
+  });
   test("matches publish keys to their run hash and validates completion metadata", () => {
     const key = `runs/${hash}/tiles/lots.pmtiles`;
     expect(keyRunHash(key)).toBe(hash);
