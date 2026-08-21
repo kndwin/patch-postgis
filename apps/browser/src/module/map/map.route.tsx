@@ -23,7 +23,6 @@ export const Route = createFileRoute("/dashboard/cadastre")({
 });
 
 const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
-const configuredPmtilesUrl = import.meta.env.VITE_PMTILES_URL as string | undefined;
 
 function ParcelMap({ archiveUrl }: { archiveUrl: string | null | undefined }) {
   const container = useRef<HTMLDivElement>(null);
@@ -219,7 +218,7 @@ export function CadastrePage() {
           </div>
           <span className="muted">{snapshot?.pmtilesStatus ?? "PMTiles status unavailable"}</span>
         </div>
-        <ParcelMap archiveUrl={snapshot?.pmtilesUrl ?? configuredPmtilesUrl} />
+        <ParcelMap archiveUrl={snapshot?.pmtilesUrl} />
       </section>
       <section className="sync-attempts" aria-labelledby="sync-attempts-heading">
         <div className="section-heading">
@@ -260,9 +259,7 @@ export function CadastrePage() {
         )}
       </section>
       <footer>
-        {(snapshot?.pmtilesUrl ?? configuredPmtilesUrl)
-          ? "PMTiles archive configured"
-          : "No PMTiles archive published"}
+        {snapshot?.pmtilesUrl ? "PMTiles archive configured" : "No PMTiles archive published"}
         {runs.length > 0 ? ` · ${runs.length} sync run(s)` : " · No sync runs"}
         {error ? ` · ${error}` : ""}
       </footer>

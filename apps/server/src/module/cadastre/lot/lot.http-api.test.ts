@@ -8,6 +8,7 @@ import {
 import { CadastreService } from "./lot.service";
 import { DbLive } from "../../../platform/database/client";
 import { parseArcgisQuery } from "./lot.arcgis";
+import { currentSnapshotResponse } from "./lot.http-api.live";
 
 // Tile integration tests require a running PostGIS database with synced
 // cadastre data.  Opt in by setting the env var before running the suite:
@@ -46,6 +47,13 @@ describe("lot GeoJSON response", () => {
         geometry: null,
       }).geometry,
     ).toBeNull();
+  });
+});
+
+describe("current snapshot response", () => {
+  test("is never stored by HTTP caches", async () => {
+    const response = await Effect.runPromise(currentSnapshotResponse(null));
+    expect(response.headers["cache-control"]).toBe("no-store");
   });
 });
 

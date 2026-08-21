@@ -8,6 +8,11 @@ import { Config, DateTime, Effect, Option } from "effect";
 import { CadastreEmailIngestionService } from "../workflow/cadastre-email-ingestion.service";
 import { extractTrustedCadastreDownloadUrl } from "@patch/http-contract";
 
+export const currentSnapshotResponse = (snapshot: unknown) =>
+  Effect.succeed(
+    HttpServerResponse.jsonUnsafe(snapshot, { headers: { "cache-control": "no-store" } }),
+  );
+
 export const CadastreLive = HttpApiBuilder.group(AppApi, "cadastre", (handlers) =>
   handlers
     .handle(
@@ -134,9 +139,10 @@ export const CadastreLive = HttpApiBuilder.group(AppApi, "cadastre", (handlers) 
       "getCurrentSnapshot",
       Effect.fn("CadastreLive.getCurrentSnapshot")(function* () {
         const service = yield* CadastreStatusService;
-        return yield* service
+        const snapshot = yield* service
           .currentSnapshot()
           .pipe(Effect.catchCause(() => Effect.fail(new HttpApiError.InternalServerError())));
+        return yield* currentSnapshotResponse(snapshot);
       }),
     )
     .handle(
